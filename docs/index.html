@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f1a" />
+    <meta name="description" content="Offline speech-to-text transcription using OpenAI Whisper in your browser. Privacy-preserving, zero-installation, zero-egress." />
+
+    <title>whisper webCLI</title>
+
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233665b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='2' width='6' height='12' rx='3'/><path d='M5 10v1a7 7 0 0 0 14 0v-1'/><path d='M12 18v4'/><path d='M8 22h8'/></svg>" />
+    <link rel="stylesheet" href="/style.css" />
+    <!-- Quill Rich Text Editor (jsDelivr) -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet" />
+  </head>
+  <body>
+    <!-- ── Header ── -->
+    <header>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3665b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3" />
+        <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+        <path d="M12 18v4" />
+        <path d="M8 22h8" />
+      </svg>
+      <h1>whisper webCLI</h1>
+      <span class="pill">offline-first</span>
+      <span class="badge-local">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+        100% local. Audio never leaves your browser.
+      </span>
+      <a class="gh-link" href="https://github.com/tejaswigowda/whisper-webCLI" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" /></svg>
+        <span>Fork on GitHub</span>
+      </a>
+    </header>
+
+    <div class="container">
+      <!-- Alerts Container -->
+      <div id="alerts" style="position: fixed; top: 1rem; right: 1rem; max-width: 400px; z-index: 1000;"></div>
+
+      <!-- ── Status bar ── -->
+      <div class="statusbar">
+        <div class="dot loaded"></div>
+        <span id="statusText">Engine ready &middot; the selected model downloads on your first transcription, then runs fully offline.</span>
+      </div>
+
+      <!-- Step 1 + Step 2 side by side -->
+      <div class="grid">
+        <!-- Step 1: Select Audio or Video -->
+        <div class="card">
+          <div class="card-header">&#9636; Step 1 &middot; Select Audio or Video</div>
+          <div class="card-body">
+            <div id="drop-zone" class="drop-zone">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+              <label for="audio-file" style="cursor: pointer; display: block;">
+                <p><strong>Click to select</strong> or drag &amp; drop a file</p>
+                <p style="margin-top: 6px;">Supports MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV</p>
+              </label>
+              <input type="file" id="audio-file" accept="audio/*,video/mp4,video/webm,video/quicktime" />
+            </div>
+
+            <div class="file-meta-list">
+              <div><span class="lbl">File</span> <span id="file-name">No file selected</span></div>
+              <div><span class="lbl">Size</span> <span id="file-size">&mdash;</span></div>
+              <div><span class="lbl">Duration</span> <span id="file-duration">&mdash;</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Configure -->
+        <div class="card">
+          <div class="card-header">&#9881; Step 2 &middot; Configure</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl" for="model-select">Model</label>
+                <select id="model-select">
+                  <!-- Populated by app.js -->
+                </select>
+                <p class="hint">Larger = more accurate, slower, more RAM.</p>
+              </div>
+
+              <div class="form-group">
+                <label class="lbl" for="language-select">Language</label>
+                <select id="language-select">
+                  <option value="auto">Auto-detect</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="it">Italian</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                  <option value="zh">Chinese</option>
+                </select>
+                <p class="hint">Auto-detect, or pick explicitly.</p>
+              </div>
+            </div>
+
+            <label class="checkbox-row">
+              <input type="checkbox" id="translate-checkbox" />
+              <span>Translate to English</span>
+            </label>
+            <p class="hint">Whisper can translate non-English audio to English.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Settings (Progressive Disclosure) -->
+      <div class="collapsible" style="margin-top: 16px;">
+        <div class="collapsible-header" id="advanced-header">
+          <span>&#8853; Advanced Settings</span>
+          <span class="collapsible-icon">&#9656;</span>
+        </div>
+        <div class="collapsible-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="lbl" for="temperature-input">Temperature (creativity)</label>
+              <input type="range" id="temperature-input" min="0" max="1" step="0.1" value="0" />
+              <p class="hint">0 = deterministic, 1 = more creative.</p>
+            </div>
+            <div class="form-group">
+              <label class="lbl" for="beam-size-input">Beam Size (search width)</label>
+              <input type="number" id="beam-size-input" min="1" max="20" value="5" />
+              <p class="hint">Higher = slower but more accurate.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Preview (shown during transcription) -->
+      <div id="preview-container" class="card hidden" style="margin-top: 16px;">
+        <div class="card-header">&#9673; Step 3 &middot; Preview</div>
+        <div class="card-body">
+          <div id="preview-text" class="preview-text">Transcription will appear here as it streams&hellip;</div>
+          <p class="hint">Transcription is processed in real time. You can edit it after completion.</p>
+        </div>
+      </div>
+
+      <!-- Transcribe Button -->
+      <div class="card" style="margin-top: 16px;">
+        <div class="card-body" style="text-align: center;">
+          <button id="transcribe-button" class="btn btn-primary" disabled style="font-size: 0.95rem; padding: 11px 26px;">
+            &#9654; Transcribe
+          </button>
+          <p class="hint" style="margin-top: 12px;">First transcription downloads the model (~39&ndash;244 MB depending on selection).</p>
+        </div>
+      </div>
+
+      <!-- Progress Indicator -->
+      <div id="progress-container" class="card hidden" style="margin-top: 16px;">
+        <div class="card-header">Transcribing&hellip;</div>
+        <div class="card-body">
+          <div class="progress">
+            <div class="progress-bar" style="width: 0%;">0%</div>
+          </div>
+          <p id="progress-text" class="hint" style="text-align: center; margin-top: 10px;">Initializing&hellip;</p>
+        </div>
+      </div>
+
+      <!-- Transcript Editor (Quill - shown after 100% completion) -->
+      <div id="transcript-container" class="card hidden" style="margin-top: 16px;">
+        <div class="card-header">
+          &#9998; Step 4 &middot; Edit &amp; Review
+          <button id="copy-transcript" class="btn btn-ghost btn-sm">&#10697; Copy</button>
+        </div>
+        <div class="card-body">
+          <div id="editor"></div>
+          <p class="hint" style="margin-top: 12px;">Edit the transcript with rich formatting. All processing happens locally on your device.</p>
+        </div>
+      </div>
+
+      <!-- Download Section -->
+      <div id="download-section" class="card hidden" style="margin-top: 16px;">
+        <div class="card-header">&#8595; Step 5 &middot; Download</div>
+        <div class="card-body">
+          <p class="hint" style="margin-bottom: 14px;">Choose your preferred format:</p>
+          <div class="button-group">
+            <button id="download-txt" class="btn btn-ghost" disabled>&#8595; Plain Text (.txt)</button>
+            <button id="download-srt" class="btn btn-ghost" disabled>&#8595; SubRip (.srt)</button>
+            <button id="download-vtt" class="btn btn-ghost" disabled>&#8595; WebVTT (.vtt)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer / Info -->
+      <div class="card" style="margin-top: 16px;">
+        <div class="card-header">&#9432; About</div>
+        <div class="card-body">
+          <p class="text-secondary" style="margin-bottom: 12px;">
+            whisper webCLI is a privacy-preserving browser application that runs OpenAI's Whisper speech-recognition model entirely on your device. No audio is uploaded anywhere. It is the second tool in the webCLI family, alongside
+            <a href="https://github.com/tejaswigowda/ffmpeg-webCLI">ffmpeg-webCLI</a>.
+          </p>
+          <p class="text-secondary text-small">
+            <a href="https://github.com/tejaswigowda/whisper-webCLI">GitHub</a>
+            &middot;
+            <a href="https://github.com/ggerganov/whisper.cpp">whisper.cpp</a>
+            &middot;
+            <a href="https://openai.com/research/whisper">OpenAI Whisper</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quill Editor (jsDelivr) -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
+
+    <!-- Scripts -->
+    <script src="/model-manager.js"></script>
+    <script src="/format-exporter.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
