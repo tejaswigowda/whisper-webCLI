@@ -91,6 +91,7 @@ input[type="number"], input[type="text"], select {
   border-radius: 6px; color: var(--text); padding: 7px 10px; font-size: 0.83rem; outline: none;
 }
 input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+input[type="range"]:disabled { cursor: default; opacity: 0.6; }
 input:focus, select:focus { border-color: var(--accent); }
 .checkbox-row { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 12px; font-size: 0.85rem; }
 .checkbox-row input { accent-color: var(--accent); cursor: pointer; }
@@ -102,6 +103,29 @@ input:focus, select:focus { border-color: var(--accent); }
   border-radius: 6px; border: 1px solid var(--border); white-space: pre-wrap;
   word-wrap: break-word; font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
   font-size: 0.78rem; line-height: 1.6; color: #7dd3fc;
+}
+
+.media-seekbar {
+  height: 6px; border-radius: 3px;
+  -webkit-appearance: none; appearance: none;
+  background: var(--surface3); outline: none;
+}
+
+.media-seekbar::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  border: 2px solid var(--accent);
+}
+
+.media-seekbar::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  border: 2px solid var(--accent);
+}
+
+.media-seekbar:disabled {
+  opacity: 0.7; cursor: not-allowed;
 }
 
 /* ── Progress ── */

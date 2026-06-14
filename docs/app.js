@@ -198,6 +198,13 @@ class WhisperApp {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Clear media player from previous file
+    const mediaPlayer = document.getElementById('media-player');
+    if (mediaPlayer.src) {
+      URL.revokeObjectURL(mediaPlayer.src);
+      mediaPlayer.src = '';
+    }
+
     document.getElementById('file-name').textContent = file.name;
     document.getElementById('file-size').textContent = this._formatBytes(file.size);
 
@@ -240,6 +247,19 @@ class WhisperApp {
       document.getElementById('transcript-container').classList.add('hidden');
       document.getElementById('download-section').classList.add('hidden');
       this._updateTranscriptionProgress({ pct: 0, label: 'Decoding audio…', segments: [] });
+
+      // Set up media player for playback
+      const mediaPlayer = document.getElementById('media-player');
+      const seekbar = document.getElementById('media-seekbar');
+      const mediaUrl = URL.createObjectURL(file);
+      mediaPlayer.src = mediaUrl;
+      this._setupMediaSeekbar();
+      this._updateSeekbarFill(seekbar);
+      
+      // Start playing audio immediately when transcription begins
+      mediaPlayer.play().catch(err => {
+        console.warn('Could not autoplay audio:', err);
+      });
 
       // Decode audio file to mono PCM (the worker resamples to 16 kHz and
       // lazily downloads + caches the Whisper model on first use).
@@ -332,6 +352,40 @@ class WhisperApp {
   }
 
   /**
+   * Set up media seekbar to sync with player playback
+   */
+  _setupMediaSeekbar() {
+    const mediaPlayer = document.getElementById('media-player');
+    const seekbar = document.getElementById('media-seekbar');
+
+    if (!mediaPlayer || !seekbar) return;
+
+    // Update seekbar max when metadata loads
+    mediaPlayer.addEventListener('loadedmetadata', () => {
+      seekbar.max = mediaPlayer.duration || 100;
+    });
+
+    // Update seekbar position as audio plays
+    mediaPlayer.addEventListener('timeupdate', () => {
+      seekbar.value = mediaPlayer.currentTime || 0;
+      // Update visual fill percentage
+      this._updateSeekbarFill(seekbar);
+    });
+  }
+
+  /**
+   * Update the visual fill of the seekbar based on current value
+   */
+  _updateSeekbarFill(seekbar) {
+    const max = parseFloat(seekbar.max) || 100;
+    const value = parseFloat(seekbar.value) || 0;
+    const percentage = (value / max) * 100;
+    
+    // Update background gradient to show filled portion
+    seekbar.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${percentage}%, var(--surface3) ${percentage}%, var(--surface3) 100%)`;
+  }
+
+  /**
    * Release screen wake lock
    */
   _releaseWakeLock() {
@@ -402,6 +456,20 @@ class WhisperApp {
         previewText.textContent = text;
         // Auto-scroll to bottom (console-like behavior)
         previewText.scrollTop = previewText.scrollHeight;
+      }
+
+      // Seek media player to follow transcription progress
+      const mediaPlayer = document.getElementById('media-player');
+      if (mediaPlayer && segments.length > 0) {
+        // Seek to the end time of the last segment
+        const lastSegment = segments[segments.length - 1];
+        mediaPlayer.currentTime = lastSegment.end;
+        // Ensure audio continues playing after seeking
+        if (!mediaPlayer.paused) {
+          mediaPlayer.play().catch(err => {
+            console.warn('Could not resume audio after seek:', err);
+          });
+        }
       }
     }
   }
