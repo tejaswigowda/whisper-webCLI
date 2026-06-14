@@ -15,16 +15,18 @@ const CACHE_VERSION = 'v2';
 const CACHE_NAME = `whisper-webCLI-${CACHE_VERSION}`;
 
 // Files to cache on install
+// Relative to the service worker's scope so the app works whether it is served
+// from a domain root or a GitHub Pages project subpath (e.g. /whisper-webCLI/).
 const CACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/transcriber.js',
-  '/model-manager.js',
-  '/format-exporter.js',
-  '/transcription-worker.js',
-  '/manifest.json',
+  './',
+  'index.html',
+  'style.css',
+  'app.js',
+  'transcriber.js',
+  'model-manager.js',
+  'format-exporter.js',
+  'transcription-worker.js',
+  'manifest.json',
 ];
 
 /**

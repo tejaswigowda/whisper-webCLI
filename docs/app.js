@@ -69,7 +69,7 @@ class WhisperApp {
 
       // Register the new service worker
       try {
-        const reg = await navigator.serviceWorker.register('/service-worker.js');
+        const reg = await navigator.serviceWorker.register('service-worker.js');
         console.log('✓ Service Worker registered:', reg);
       } catch (err) {
         console.warn('Service Worker registration failed:', err);
@@ -78,7 +78,7 @@ class WhisperApp {
 
     // Initialize Web Worker for transcription (ES module worker).
     // The Whisper model is loaded lazily inside the worker on first transcribe.
-    this.worker = new Worker('/transcription-worker.js', { type: 'module' });
+    this.worker = new Worker('transcription-worker.js', { type: 'module' });
     this.worker.onmessage = (event) => this._handleWorkerMessage(event);
     this.worker.onerror = (err) => {
       this._showAlert(`Worker error: ${err.message}`, 'error');

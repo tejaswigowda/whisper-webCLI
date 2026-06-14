@@ -2,8 +2,8 @@
   "name": "whisper-webCLI",
   "short_name": "whisper",
   "description": "Offline speech-to-text transcription using OpenAI Whisper in your browser. Privacy-preserving, zero-installation, zero-egress.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#0d0f1a",
@@ -11,19 +11,19 @@
   "categories": ["productivity", "utilities"],
   "screenshots": [
     {
-      "src": "/screenshot-192.png",
+      "src": "screenshot-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/screenshot-512.png",
+      "src": "screenshot-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/screenshot-192-maskable.png",
+      "src": "screenshot-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
@@ -31,25 +31,25 @@
   ],
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192-maskable.png",
+      "src": "icon-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512-maskable.png",
+      "src": "icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -60,10 +60,10 @@
       "name": "Transcribe File",
       "short_name": "Transcribe",
       "description": "Open whisper-webCLI and transcribe an audio file",
-      "url": "/?mode=transcribe",
+      "url": "./?mode=transcribe",
       "icons": [
         {
-          "src": "/icon-192.png",
+          "src": "icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -71,7 +71,7 @@
     }
   ],
   "share_target": {
-    "action": "/share",
+    "action": "share",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
