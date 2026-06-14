@@ -134,7 +134,13 @@
       <div id="preview-container" class="card hidden" style="margin-top: 16px;">
         <div class="card-header">&#9673; Step 3 &middot; Preview</div>
         <div class="card-body">
-          <div id="preview-text" class="preview-text">Transcription will appear here as it streams&hellip;</div>
+          <div id="progress-container">
+            <div class="progress">
+              <div class="progress-bar" style="width: 0%;">0%</div>
+            </div>
+            <p id="progress-text" class="hint" style="text-align: center; margin-top: 10px;">Initializing&hellip;</p>
+          </div>
+          <div id="preview-text" class="preview-text" style="margin-top: 12px;">Transcription will appear here as it streams&hellip;</div>
           <p class="hint">Transcription is processed in real time. You can edit it after completion.</p>
         </div>
       </div>
@@ -146,17 +152,6 @@
             &#9654; Transcribe
           </button>
           <p class="hint" style="margin-top: 12px;">First transcription downloads the model (~39&ndash;244 MB depending on selection).</p>
-        </div>
-      </div>
-
-      <!-- Progress Indicator -->
-      <div id="progress-container" class="card hidden" style="margin-top: 16px;">
-        <div class="card-header">Transcribing&hellip;</div>
-        <div class="card-body">
-          <div class="progress">
-            <div class="progress-bar" style="width: 0%;">0%</div>
-          </div>
-          <p id="progress-text" class="hint" style="text-align: center; margin-top: 10px;">Initializing&hellip;</p>
         </div>
       </div>
 
