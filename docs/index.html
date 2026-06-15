@@ -51,19 +51,57 @@
         <div class="card">
           <div class="card-header">&#9636; Step 1 &middot; Select Audio or Video</div>
           <div class="card-body">
-            <div id="drop-zone" class="drop-zone">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <label for="audio-file" style="cursor: pointer; display: block;">
-                <p><strong>Click to select</strong> or drag &amp; drop a file</p>
-                <p style="margin-top: 6px;">Supports MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV</p>
-              </label>
-              <input type="file" id="audio-file" accept="audio/*,video/mp4,video/webm,video/quicktime" />
+            <!-- Mode Selector: File vs Microphone -->
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+              <button id="mode-file-btn" class="btn btn-mode active" data-mode="file" style="flex: 1;">📁 Upload File</button>
+              <button id="mode-mic-btn" class="btn btn-mode" data-mode="mic" style="flex: 1;">🎤 Microphone</button>
             </div>
 
-            <div class="file-meta-list">
-              <div><span class="lbl">File</span> <span id="file-name">No file selected</span></div>
-              <div><span class="lbl">Size</span> <span id="file-size">&mdash;</span></div>
-              <div><span class="lbl">Duration</span> <span id="file-duration">&mdash;</span></div>
+            <!-- File Upload Mode -->
+            <div id="file-mode" class="input-mode">
+              <div id="drop-zone" class="drop-zone">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <label for="audio-file" style="cursor: pointer; display: block;">
+                  <p><strong>Click to select</strong> or drag &amp; drop a file</p>
+                  <p style="margin-top: 6px;">Supports MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV</p>
+                </label>
+                <input type="file" id="audio-file" accept="audio/*,video/mp4,video/webm,video/quicktime" />
+              </div>
+
+              <div class="file-meta-list">
+                <div><span class="lbl">File</span> <span id="file-name">No file selected</span></div>
+                <div><span class="lbl">Size</span> <span id="file-size">&mdash;</span></div>
+                <div><span class="lbl">Duration</span> <span id="file-duration">&mdash;</span></div>
+              </div>
+            </div>
+
+            <!-- Microphone Mode -->
+            <div id="mic-mode" class="input-mode hidden">
+              <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
+                <p class="hint">Click below to start recording from your microphone.</p>
+                <button id="mic-start-btn" class="btn btn-primary" style="margin-top: 12px; padding: 12px 24px;">
+                  🔴 Start Recording
+                </button>
+                <p id="mic-status" class="hint" style="margin-top: 10px; min-height: 20px;"></p>
+              </div>
+
+              <div id="mic-recording-panel" class="hidden" style="margin-top: 14px; padding: 12px; background: var(--surface3); border-radius: 6px; border: 1px solid var(--danger);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-weight: 700; color: var(--danger);">🔴 Recording</div>
+                    <p id="recording-time" class="hint">0:00 elapsed</p>
+                  </div>
+                  <button id="mic-stop-btn" class="btn btn-danger">⏹ Stop</button>
+                </div>
+                <div id="mic-waveform-container" style="margin-top: 12px;">
+                  <canvas id="mic-waveform" style="width: 100%; height: 60px; background: #080a10; border-radius: 4px; display: block;"></canvas>
+                </div>
+              </div>
+
+              <div class="file-meta-list" id="mic-meta-list" style="margin-top: 12px;">
+                <div><span class="lbl">Duration</span> <span id="mic-duration">&mdash;</span></div>
+                <div><span class="lbl">Sample Rate</span> <span id="mic-sample-rate">&mdash;</span></div>
+              </div>
             </div>
           </div>
         </div>

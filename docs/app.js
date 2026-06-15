@@ -36,6 +36,17 @@ class WhisperApp {
     this.batchQueue = [];
     this.batchCurrentIndex = 0;
     this.batchResults = [];
+
+    // Microphone / Live transcription
+    this.inputMode = 'file'; // 'file' or 'mic'
+    this.mediaStream = null;
+    this.audioContext = null;
+    this.audioWorklet = null;
+    this.isRecording = false;
+    this.recordingStartTime = null;
+    this.micAudioBuffer = new Float32Array(0);
+    this.recordedAudio = null;
+    this.recordedSampleRate = null;
   }
 
   /**
@@ -185,6 +196,24 @@ class WhisperApp {
       });
     }
 
+    // Input mode switching (File vs Microphone)
+    const modeFileBtn = document.getElementById('mode-file-btn');
+    const modeMicBtn = document.getElementById('mode-mic-btn');
+    if (modeFileBtn && modeMicBtn) {
+      modeFileBtn.addEventListener('click', () => this._switchInputMode('file'));
+      modeMicBtn.addEventListener('click', () => this._switchInputMode('mic'));
+    }
+
+    // Microphone controls
+    const micStartBtn = document.getElementById('mic-start-btn');
+    const micStopBtn = document.getElementById('mic-stop-btn');
+    if (micStartBtn) {
+      micStartBtn.addEventListener('click', () => this._startMicRecording());
+    }
+    if (micStopBtn) {
+      micStopBtn.addEventListener('click', () => this._stopMicRecording());
+    }
+
     // Transcribe button
     const transcribeBtn = document.getElementById('transcribe-button');
     if (transcribeBtn) {
@@ -268,76 +297,6 @@ class WhisperApp {
   /**
    * Handle transcription
    */
-  async _handleTranscribe() {
-    const fileInput = document.getElementById('audio-file');
-    if (!fileInput.files.length) {
-      this._showAlert('Please select an audio file', 'warning');
-      return;
-    }
-
-    const file = fileInput.files[0];
-
-    try {
-      this.isTranscribing = true;
-      
-      // Reset metrics for this transcription
-      this.metricsStartTime = Date.now();
-      this.totalTokens = 0;
-      this.detectedLanguage = null;
-      this.confidenceScores = [];
-      this.segmentDetails = [];
-      
-      document.getElementById('transcribe-button').disabled = true;
-      document.getElementById('progress-container').classList.remove('hidden');
-      document.getElementById('preview-container').classList.remove('hidden');
-      document.getElementById('transcript-container').classList.add('hidden');
-      document.getElementById('download-section').classList.add('hidden');
-      this._updateTranscriptionProgress({ pct: 0, label: 'Decoding audio…', segments: [] });
-
-      // Set up media player for playback
-      const mediaPlayer = document.getElementById('media-player');
-      const seekbar = document.getElementById('media-seekbar');
-      const mediaUrl = URL.createObjectURL(file);
-      mediaPlayer.src = mediaUrl;
-      this._setupMediaSeekbar();
-      this._updateSeekbarFill(seekbar);
-      
-      // Start playing audio immediately when transcription begins
-      mediaPlayer.play().catch(err => {
-        console.warn('Could not autoplay audio:', err);
-      });
-
-      // Decode audio file to mono PCM (the worker resamples to 16 kHz and
-      // lazily downloads + caches the Whisper model on first use).
-      const audioBuffer = await this._decodeAudioFile(file);
-
-      // Send to worker for transcription.
-      // Transfer audioData buffer ownership to avoid copying.
-      this.worker.postMessage(
-        {
-          type: 'transcribe',
-          payload: {
-            audioBuffer: audioBuffer.audioData.buffer,
-            sampleRate: audioBuffer.sampleRate,
-            options: {
-              model: this.selectedModel,
-              language: this.selectedLanguage,
-              translate: this.translateToEnglish,
-            },
-          },
-        },
-        [audioBuffer.audioData.buffer]
-      );
-
-      // Request screen wake lock
-      await this._requestWakeLock();
-    } catch (err) {
-      this._showAlert(`Transcription error: ${err.message}`, 'error');
-      this.isTranscribing = false;
-      document.getElementById('transcribe-button').disabled = false;
-    }
-  }
-
   /**
    * Decode audio file to AudioBuffer and convert to transferable format
    * AudioBuffer cannot be cloned, so we convert to Float32Array
@@ -749,6 +708,294 @@ class WhisperApp {
       return `${minutes}m ${secs}s`;
     } else {
       return `${secs}s`;
+    }
+  }
+
+  /**
+   * Switch between file upload and microphone input modes
+   */
+  _switchInputMode(mode) {
+    this.inputMode = mode;
+    
+    const fileMode = document.getElementById('file-mode');
+    const micMode = document.getElementById('mic-mode');
+    const modeFileBtn = document.getElementById('mode-file-btn');
+    const modeMicBtn = document.getElementById('mode-mic-btn');
+    const transcribeBtn = document.getElementById('transcribe-button');
+
+    if (mode === 'file') {
+      fileMode.classList.remove('hidden');
+      micMode.classList.add('hidden');
+      modeFileBtn.classList.add('active');
+      modeMicBtn.classList.remove('active');
+      
+      // Re-check if file is selected
+      const fileInput = document.getElementById('audio-file');
+      transcribeBtn.disabled = !fileInput.files.length;
+    } else if (mode === 'mic') {
+      fileMode.classList.add('hidden');
+      micMode.classList.remove('hidden');
+      modeFileBtn.classList.remove('active');
+      modeMicBtn.classList.add('active');
+      
+      // Stop any existing recording
+      if (this.isRecording) {
+        this._stopMicRecording();
+      }
+      
+      transcribeBtn.disabled = true;
+    }
+  }
+
+  /**
+   * Start microphone recording
+   */
+  async _startMicRecording() {
+    try {
+      // Request microphone access
+      if (!this.mediaStream) {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      // Initialize audio context if needed
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      this.isRecording = true;
+      this.recordingStartTime = Date.now();
+      this.micAudioBuffer = new Float32Array(0);
+      
+      // Show recording panel
+      document.getElementById('mic-start-btn').disabled = true;
+      document.getElementById('mic-recording-panel').classList.remove('hidden');
+      document.getElementById('mic-status').textContent = '🎙️ Listening...';
+
+      // Set up audio capture using ScriptProcessorNode (or AudioWorklet in future)
+      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      const bufferSize = 4096;
+      const processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+      processor.onaudioprocess = (event) => {
+        const inputData = event.inputBuffer.getChannelData(0);
+        this._accumulateAudio(inputData);
+        
+        // Update waveform visualization
+        this._drawMicWaveform(inputData);
+        
+        // Update recording time
+        this._updateRecordingTime();
+      };
+
+      source.connect(processor);
+      processor.connect(this.audioContext.destination);
+      this.audioWorklet = processor;
+
+      document.getElementById('mic-duration').textContent = '0:00';
+      document.getElementById('mic-sample-rate').textContent = `${this.audioContext.sampleRate} Hz`;
+
+      this._showAlert('🎤 Recording started', 'success');
+    } catch (err) {
+      this._showAlert(`Microphone access denied: ${err.message}`, 'error');
+      this.isRecording = false;
+      document.getElementById('mic-start-btn').disabled = false;
+    }
+  }
+
+  /**
+   * Accumulate audio samples from microphone
+   */
+  _accumulateAudio(inputData) {
+    const current = this.micAudioBuffer;
+    const newBuffer = new Float32Array(current.length + inputData.length);
+    newBuffer.set(current);
+    newBuffer.set(inputData, current.length);
+    this.micAudioBuffer = newBuffer;
+  }
+
+  /**
+   * Draw waveform on canvas during recording
+   */
+  _drawMicWaveform(audioData) {
+    const canvas = document.getElementById('mic-waveform');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#080a10';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#3665b6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    const sliceWidth = width / audioData.length;
+    let x = 0;
+
+    for (let i = 0; i < audioData.length; i++) {
+      const v = audioData[i] / 128.0;
+      const y = (height / 2) * (1 + v);
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+
+      x += sliceWidth;
+    }
+
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+  }
+
+  /**
+   * Update recording elapsed time display
+   */
+  _updateRecordingTime() {
+    if (!this.recordingStartTime) return;
+    
+    const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    const timeEl = document.getElementById('recording-time');
+    if (timeEl) {
+      timeEl.textContent = `${timeStr} elapsed`;
+    }
+  }
+
+  /**
+   * Stop microphone recording and prepare for transcription
+   */
+  async _stopMicRecording() {
+    try {
+      if (!this.isRecording) return;
+
+      this.isRecording = false;
+
+      // Stop audio capture
+      if (this.audioWorklet) {
+        this.audioWorklet.disconnect();
+        this.audioWorklet = null;
+      }
+
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach(track => track.stop());
+        this.mediaStream = null;
+      }
+
+      // Store recording info
+      this.recordedAudio = this.micAudioBuffer;
+      this.recordedSampleRate = this.audioContext.sampleRate;
+
+      const recordingDuration = this.recordedAudio.length / this.recordedSampleRate;
+      document.getElementById('mic-duration').textContent = this._formatSeconds(recordingDuration);
+
+      // Hide recording panel
+      document.getElementById('mic-recording-panel').classList.add('hidden');
+      document.getElementById('mic-start-btn').disabled = false;
+      document.getElementById('mic-status').textContent = '✓ Recording saved. Ready to transcribe.';
+
+      // Enable transcribe button
+      document.getElementById('transcribe-button').disabled = false;
+
+      this._showAlert('✓ Recording stopped', 'success');
+    } catch (err) {
+      this._showAlert(`Error stopping recording: ${err.message}`, 'error');
+    }
+  }
+
+  /**
+   * Handle transcription for both file and microphone modes
+   */
+  async _handleTranscribe() {
+    let audioBuffer;
+    let file = null;
+
+    if (this.inputMode === 'file') {
+      // File mode: original logic
+      const fileInput = document.getElementById('audio-file');
+      if (!fileInput.files.length) {
+        this._showAlert('Please select an audio file', 'warning');
+        return;
+      }
+      file = fileInput.files[0];
+      audioBuffer = await this._decodeAudioFile(file);
+    } else if (this.inputMode === 'mic') {
+      // Microphone mode: use recorded audio
+      if (!this.recordedAudio || this.recordedAudio.length === 0) {
+        this._showAlert('Please record audio first', 'warning');
+        return;
+      }
+      audioBuffer = {
+        audioData: this.recordedAudio,
+        sampleRate: this.recordedSampleRate,
+        channels: 1,
+        length: this.recordedAudio.length,
+      };
+    } else {
+      this._showAlert('Invalid input mode', 'error');
+      return;
+    }
+
+    try {
+      this.isTranscribing = true;
+      
+      // Reset metrics
+      this.metricsStartTime = Date.now();
+      this.totalTokens = 0;
+      this.detectedLanguage = null;
+      this.confidenceScores = [];
+      this.segmentDetails = [];
+      
+      document.getElementById('transcribe-button').disabled = true;
+      document.getElementById('progress-container').classList.remove('hidden');
+      document.getElementById('preview-container').classList.remove('hidden');
+      document.getElementById('transcript-container').classList.add('hidden');
+      document.getElementById('download-section').classList.add('hidden');
+      this._updateTranscriptionProgress({ pct: 0, label: 'Initializing…', segments: [] });
+
+      // Set up media player for file mode only
+      if (this.inputMode === 'file' && file) {
+        const mediaPlayer = document.getElementById('media-player');
+        const seekbar = document.getElementById('media-seekbar');
+        const mediaUrl = URL.createObjectURL(file);
+        mediaPlayer.src = mediaUrl;
+        this._setupMediaSeekbar();
+        this._updateSeekbarFill(seekbar);
+        
+        // Start playing audio immediately
+        mediaPlayer.play().catch(err => {
+          console.warn('Could not autoplay audio:', err);
+        });
+      }
+
+      // Send to worker
+      this.worker.postMessage(
+        {
+          type: 'transcribe',
+          payload: {
+            audioBuffer: audioBuffer.audioData.buffer,
+            sampleRate: audioBuffer.sampleRate,
+            options: {
+              model: this.selectedModel,
+              language: this.selectedLanguage,
+              translate: this.translateToEnglish,
+            },
+          },
+        },
+        [audioBuffer.audioData.buffer]
+      );
+
+      await this._requestWakeLock();
+    } catch (err) {
+      this._showAlert(`Transcription error: ${err.message}`, 'error');
+      this.isTranscribing = false;
+      document.getElementById('transcribe-button').disabled = false;
     }
   }
 

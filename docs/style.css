@@ -68,7 +68,17 @@ header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
 .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-ghost:hover:not(:disabled) { background: var(--surface3); }
 .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+.btn-danger { padding: 7px 14px; background: var(--danger); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.83rem; transition: background .15s; }
+.btn-danger:hover { background: #dc2626; }
+.btn-danger:disabled { background: var(--muted); cursor: not-allowed; opacity: 0.6; }
+.btn-mode { padding: 8px 16px; background: var(--surface3); border: 1px solid var(--surface3); border-radius: 6px; color: var(--muted); font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.btn-mode:hover { background: var(--surface2); }
+.btn-mode.active { background: var(--accent); border-color: var(--accent); color: white; }
 .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── Input Modes ── */
+.input-mode { display: block; }
+.input-mode.hidden { display: none; }
 
 /* ── Upload zone ── */
 .drop-zone { border: 2px dashed var(--border); border-radius: var(--r); padding: 36px 20px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; background: var(--surface2); }
