@@ -4,7 +4,7 @@
 
 A browser-based speech-to-text transcriber powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) and OpenAI's Whisper model. <b><ins>No uploads, no servers -- all processing happens locally</ins></b> in your browser using WebAssembly.
 
-▶ **Live app:** https://tejaswigowda.github.io/whisper-webCLI/
+▶ **Live app:** https://tejaswigowda.com/whisper-webCLI/
 
 > Second in the **webCLI** family of zero-egress, offline-first browser tools, alongside [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI). Same look and feel, same privacy promise: your media never leaves your device.
 
@@ -61,9 +61,9 @@ whisper-webCLI covers the common transcription tasks for free, with audio that
 ### ▤ 1 · Select Audio Input
 Choose one of two input modes:
 
-**📁 Upload File** — Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
+**� Upload File** — Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
 
-**🎤 Recording** — Click to start recording directly from your microphone. Real-time waveform visualization shows your audio levels. Duration and sample rate are displayed throughout the recording.
+**♪ Recording** — Click to start recording directly from your microphone. Real-time waveform visualization shows your audio levels. Duration and sample rate are displayed throughout the recording.
 
 ### ⚙ 2 · Configure
 Pick a **model** (tiny → medium) and a **language** (auto-detect or explicit). Optionally enable **Translate to English** to convert non-English speech to English text.

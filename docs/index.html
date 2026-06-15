@@ -11,6 +11,8 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233665b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='2' width='6' height='12' rx='3'/><path d='M5 10v1a7 7 0 0 0 14 0v-1'/><path d='M12 18v4'/><path d='M8 22h8'/></svg>" />
     <link rel="stylesheet" href="style.css" />
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Quill Rich Text Editor (jsDelivr) -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet" />
   </head>
@@ -49,13 +51,13 @@
       <div class="grid">
         <!-- Step 1: Select Audio or Video -->
         <div class="card">
-          <div class="card-header">&#9636; Step 1 &middot; Select Audio or Video</div>
+          <div class="card-header"><i class="fas fa-bars"></i> Step 1 &middot; Select Audio or Video</div>
           <div class="card-body">
             <!-- Mode Selector: File vs Microphone vs Live Stream -->
             <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-              <button id="mode-file-btn" class="btn btn-mode active" onclick="window.switchInputMode && window.switchInputMode('file')" style="flex: 1;">📁 Upload File</button>
-              <button id="mode-mic-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('mic')" style="flex: 1;">🎤 Recording</button>
-              <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none;">🌐 Live Stream</button>
+              <button id="mode-file-btn" class="btn btn-mode active" onclick="window.switchInputMode && window.switchInputMode('file')" style="flex: 1;"><i class="fas fa-folder-open"></i> Upload File</button>
+              <button id="mode-mic-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('mic')" style="flex: 1;"><i class="fas fa-microphone"></i> Recording</button>
+              <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none;"><i class="fas fa-globe"></i> Live Stream</button>
             </div>
 
             <!-- File Upload Mode -->
@@ -81,7 +83,7 @@
               <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
                 <p class="hint">Click below to start recording from your microphone.</p>
                 <button id="mic-start-btn" class="btn btn-primary" onclick="window.startMicRecording && window.startMicRecording()" style="margin-top: 12px; padding: 12px 24px;">
-                  🔴 Start Recording
+                  <i class="fas fa-circle" style="color: #ff4444;"></i> Start Recording
                 </button>
                 <p id="mic-status" class="hint" style="margin-top: 10px; min-height: 20px;"></p>
               </div>
@@ -89,10 +91,10 @@
               <div id="mic-recording-panel" class="hidden" style="margin-top: 14px; padding: 12px; background: var(--surface3); border-radius: 6px; border: 1px solid var(--danger);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div>
-                    <div style="font-weight: 700; color: var(--danger);">🔴 Recording</div>
+                    <div style="font-weight: 700; color: var(--danger);"><i class="fas fa-circle" style="color: #ff4444;"></i> Recording</div>
                     <p id="recording-time" class="hint">0:00 elapsed</p>
                   </div>
-                  <button id="mic-stop-btn" class="btn btn-danger" onclick="window.stopMicRecording && window.stopMicRecording()">⏹ Stop</button>
+                  <button id="mic-stop-btn" class="btn btn-danger" onclick="window.stopMicRecording && window.stopMicRecording()"><i class="fas fa-stop"></i> Stop</button>
                 </div>
                 <div id="mic-waveform-container" style="margin-top: 12px;">
                   <canvas id="mic-waveform" style="width: 100%; height: 60px; background: #080a10; border-radius: 4px; display: block;"></canvas>
@@ -110,7 +112,7 @@
               <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
                 <p class="hint">Click below to start live transcription. Audio is processed in 5-second chunks.</p>
                 <button id="stream-start-btn" class="btn btn-primary" onclick="window.startLiveStream && window.startLiveStream()" style="margin-top: 12px; padding: 12px 24px;">
-                  🟢 Start Streaming
+                  <i class="fas fa-circle" style="color: #44ff44;"></i> Start Streaming
                 </button>
                 <p id="stream-status" class="hint" style="margin-top: 10px; min-height: 20px;"></p>
               </div>
@@ -118,10 +120,10 @@
               <div id="stream-active-panel" class="hidden" style="margin-top: 14px; padding: 12px; background: var(--surface3); border-radius: 6px; border: 1px solid var(--accent);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div>
-                    <div style="font-weight: 700; color: var(--accent);">🟢 Streaming Live</div>
+                    <div style="font-weight: 700; color: var(--accent);"><i class="fas fa-circle" style="color: #44ff44;"></i> Streaming Live</div>
                     <p id="stream-time" class="hint">0:00 elapsed</p>
                   </div>
-                  <button id="stream-stop-btn" class="btn btn-danger" onclick="window.stopLiveStream && window.stopLiveStream()">⏹ Stop</button>
+                  <button id="stream-stop-btn" class="btn btn-danger" onclick="window.stopLiveStream && window.stopLiveStream()"><i class="fas fa-stop"></i> Stop</button>
                 </div>
                 <div id="stream-waveform-container" style="margin-top: 12px;">
                   <canvas id="stream-waveform" style="width: 100%; height: 60px; background: #080a10; border-radius: 4px; display: block;"></canvas>
@@ -138,7 +140,7 @@
 
         <!-- Step 2: Configure -->
         <div class="card">
-          <div class="card-header">&#9881; Step 2 &middot; Configure</div>
+          <div class="card-header"><i class="fas fa-cog"></i> Step 2 &middot; Configure</div>
           <div class="card-body">
             <div class="form-row">
               <div class="form-group">
@@ -179,8 +181,8 @@
       <!-- Advanced Settings (Progressive Disclosure) -->
       <div class="collapsible" style="margin-top: 16px;">
         <div class="collapsible-header" id="advanced-header">
-          <span>&#8853; Advanced Settings</span>
-          <span class="collapsible-icon">&#9656;</span>
+          <span><i class="fas fa-sliders-h"></i> Advanced Settings</span>
+          <span class="collapsible-icon"><i class="fas fa-chevron-right"></i></span>
         </div>
         <div class="collapsible-content">
           <div class="form-row">
@@ -234,7 +236,7 @@
 
       <!-- Step 3: Preview (shown during transcription) -->
       <div id="preview-container" class="card hidden" style="margin-top: 16px;">
-        <div class="card-header">&#9673; Step 3 &middot; Preview</div>
+        <div class="card-header"><i class="fas fa-circle-play"></i> Step 3 &middot; Preview</div>
         <div class="card-body">
           <div id="progress-container">
             <div class="progress">
@@ -286,7 +288,7 @@
       <div class="card" style="margin-top: 16px;">
         <div class="card-body" style="text-align: center;">
           <button id="transcribe-button" class="btn btn-primary" disabled style="font-size: 0.95rem; padding: 11px 26px;">
-            &#9654; Transcribe
+            <i class="fas fa-play"></i> Transcribe
           </button>
           <p class="hint" style="margin-top: 12px;">First transcription downloads the model (~39&ndash;244 MB depending on selection).</p>
         </div>
@@ -295,8 +297,8 @@
       <!-- Transcript Editor (Quill - shown after 100% completion) -->
       <div id="transcript-container" class="card hidden" style="margin-top: 16px;">
         <div class="card-header">
-          &#9998; Step 4 &middot; Edit &amp; Review
-          <button id="copy-transcript" class="btn btn-ghost btn-sm">&#10697; Copy</button>
+          <i class="fas fa-pen"></i> Step 4 &middot; Edit &amp; Review
+          <button id="copy-transcript" class="btn btn-ghost btn-sm"><i class="fas fa-copy"></i> Copy</button>
         </div>
         <div class="card-body">
           <div id="editor"></div>
@@ -306,20 +308,20 @@
 
       <!-- Download Section -->
       <div id="download-section" class="card hidden" style="margin-top: 16px;">
-        <div class="card-header">&#8595; Step 5 &middot; Download</div>
+        <div class="card-header"><i class="fas fa-download"></i> Step 5 &middot; Download</div>
         <div class="card-body">
           <p class="hint" style="margin-bottom: 14px;">Choose your preferred format:</p>
           <div class="button-group">
-            <button id="download-txt" class="btn btn-ghost" disabled>&#8595; Plain Text (.txt)</button>
-            <button id="download-srt" class="btn btn-ghost" disabled>&#8595; SubRip (.srt)</button>
-            <button id="download-vtt" class="btn btn-ghost" disabled>&#8595; WebVTT (.vtt)</button>
+            <button id="download-txt" class="btn btn-ghost" disabled><i class="fas fa-download"></i> Plain Text (.txt)</button>
+            <button id="download-srt" class="btn btn-ghost" disabled><i class="fas fa-download"></i> SubRip (.srt)</button>
+            <button id="download-vtt" class="btn btn-ghost" disabled><i class="fas fa-download"></i> WebVTT (.vtt)</button>
           </div>
         </div>
       </div>
 
       <!-- Footer / Info -->
       <div class="card" style="margin-top: 16px;">
-        <div class="card-header">&#9432; About</div>
+        <div class="card-header"><i class="fas fa-circle-info"></i> About</div>
         <div class="card-body">
           <p class="text-secondary" style="margin-bottom: 12px;">
             whisper webCLI is a privacy-preserving browser application that runs OpenAI's Whisper speech-recognition model entirely on your device. No audio is uploaded anywhere. It is the second tool in the webCLI family, alongside
