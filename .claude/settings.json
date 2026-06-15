@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -sL https://raw.githubusercontent.com/tejaswigowda/ffmpeg-webCLI/main/docs/index.html -o ff-index.html)",
+      "Bash(curl -sL https://raw.githubusercontent.com/tejaswigowda/ffmpeg-webCLI/main/docs/style.css -o ff-style.css)",
+      "Bash(curl -sL https://raw.githubusercontent.com/tejaswigowda/ffmpeg-webCLI/main/README.md -o ff-readme.md)",
+      "Bash(node server.js 8123)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} index.html\\\\n\" http://127.0.0.1:8123/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} style.css\\\\n\" http://127.0.0.1:8123/style.css)",
+      "Bash(curl -s http://127.0.0.1:8123/)",
+      "Bash(kill %1)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('manifest.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")"
+    ]
+  }
+}

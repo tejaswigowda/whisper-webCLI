@@ -23,6 +23,19 @@ class WhisperApp {
     this.selectedLanguage = 'auto';
     this.translateToEnglish = false;
     this.quillEditor = null; // Rich text editor instance
+    
+    // Metrics tracking
+    this.metricsStartTime = null;
+    this.totalTokens = 0;
+    this.detectedLanguage = null;
+    this.confidenceScores = [];
+    this.segmentDetails = [];
+    
+    // Batch processing
+    this.batchMode = false;
+    this.batchQueue = [];
+    this.batchCurrentIndex = 0;
+    this.batchResults = [];
   }
 
   /**
@@ -147,6 +160,23 @@ class WhisperApp {
       });
     }
 
+    // Batch mode checkbox
+    const batchCheckbox = document.getElementById('batch-mode-checkbox');
+    if (batchCheckbox) {
+      batchCheckbox.addEventListener('change', (e) => {
+        this.batchMode = e.target.checked;
+        document.getElementById('batch-file-list').classList.toggle('hidden', !this.batchMode);
+      });
+    }
+
+    // Detailed info toggle
+    const detailedToggle = document.getElementById('detailed-info-toggle');
+    if (detailedToggle) {
+      detailedToggle.addEventListener('change', (e) => {
+        document.getElementById('segment-details').classList.toggle('hidden', !e.target.checked);
+      });
+    }
+
     // Transcribe button
     const transcribeBtn = document.getElementById('transcribe-button');
     if (transcribeBtn) {
@@ -241,6 +271,14 @@ class WhisperApp {
 
     try {
       this.isTranscribing = true;
+      
+      // Reset metrics for this transcription
+      this.metricsStartTime = Date.now();
+      this.totalTokens = 0;
+      this.detectedLanguage = null;
+      this.confidenceScores = [];
+      this.segmentDetails = [];
+      
       document.getElementById('transcribe-button').disabled = true;
       document.getElementById('progress-container').classList.remove('hidden');
       document.getElementById('preview-container').classList.remove('hidden');
@@ -448,6 +486,42 @@ class WhisperApp {
       if (progressText) progressText.textContent = label;
     }
 
+    // Track metrics
+    if (segments && segments.length > 0) {
+      // Store segment details for later display
+      this.segmentDetails = segments.map(seg => ({
+        start: seg.start?.toFixed(2),
+        end: seg.end?.toFixed(2),
+        text: seg.text?.substring(0, 50),
+      }));
+
+      // Calculate tokens (rough estimate: words * 1.3)
+      const totalWords = segments.reduce((sum, seg) => sum + (seg.text?.split(/\s+/).length || 0), 0);
+      this.totalTokens = Math.round(totalWords * 1.3);
+
+      // Update metrics display
+      if (this.metricsStartTime) {
+        const elapsedMs = Date.now() - this.metricsStartTime;
+        const elapsedSec = (elapsedMs / 1000).toFixed(2);
+        const tokensPerSec = this.totalTokens > 0 ? (this.totalTokens / (elapsedSec / 1)).toFixed(1) : '—';
+        const secPerToken = this.totalTokens > 0 ? ((elapsedSec / this.totalTokens).toFixed(3)) : '—';
+
+        document.getElementById('speed-metric').textContent = secPerToken + ' sec/token';
+        document.getElementById('time-metric').textContent = elapsedSec + ' sec';
+        document.getElementById('tokens-metric').textContent = tokensPerSec + ' t/s';
+      }
+
+      // Update segment details if displayed
+      const segmentDetails = document.getElementById('segment-details');
+      if (segmentDetails && !segmentDetails.classList.contains('hidden')) {
+        const detailsHtml = segments
+          .slice(-5) // Show last 5 segments
+          .map(seg => `<div>[${seg.start?.toFixed(2)}-${seg.end?.toFixed(2)}s] ${seg.text?.substring(0, 40)}...</div>`)
+          .join('');
+        segmentDetails.innerHTML = detailsHtml;
+      }
+    }
+
     // Live streaming transcription in preview
     if (segments && segments.length > 0) {
       const previewText = document.getElementById('preview-text');
@@ -483,6 +557,28 @@ class WhisperApp {
 
     // Release screen wake lock
     this._releaseWakeLock();
+
+    // Finalize metrics display
+    if (this.metricsStartTime) {
+      const elapsedMs = Date.now() - this.metricsStartTime;
+      const elapsedSec = (elapsedMs / 1000).toFixed(2);
+      
+      // Display detected language
+      const langMap = {
+        'auto': 'Auto-detected',
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'zh': 'Chinese',
+      };
+      const detectedLang = this.selectedLanguage === 'auto' ? 'Detected' : langMap[this.selectedLanguage] || this.selectedLanguage;
+      document.getElementById('language-metric').textContent = detectedLang;
+    }
 
     // Hide preview, show editor (Step 4)
     const previewContainer = document.getElementById('preview-container');

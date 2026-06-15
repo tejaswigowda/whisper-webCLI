@@ -138,6 +138,23 @@ input:focus, select:focus { border-color: var(--accent); }
 }
 @keyframes progress-stripes { from { background-position: 32px 0; } to { background-position: 0 0; } }
 
+/* ── Metrics Panel ── */
+.metric-item { display: flex; flex-direction: column; gap: 4px; }
+.metric-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.metric-value { font-size: 0.85rem; color: var(--accent-h); font-weight: 700; font-family: 'SF Mono', 'Courier New', monospace; }
+
+#metrics-panel {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;
+  margin-top: 12px; padding: 12px; background: var(--surface3); border-radius: 6px;
+}
+
+#segment-details {
+  font-family: 'SF Mono', 'Courier New', monospace; font-size: 0.7rem;
+  color: var(--muted); max-height: 150px; overflow-y: auto;
+  border-top: 1px solid var(--surface3); padding-top: 8px; margin-top: 8px;
+  line-height: 1.4;
+}
+
 /* ── Collapsible (Advanced Settings) ── */
 .collapsible { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--surface); }
 .collapsible-header { background: var(--surface2); padding: 11px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); user-select: none; transition: background .15s; }

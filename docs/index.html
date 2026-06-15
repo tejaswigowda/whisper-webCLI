@@ -127,6 +127,32 @@
               <p class="hint">Higher = slower but more accurate.</p>
             </div>
           </div>
+          
+          <!-- Batch Processing Mode -->
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--surface3);">
+            <label class="checkbox-row">
+              <input type="checkbox" id="batch-mode-checkbox" />
+              <span>Batch Processing</span>
+            </label>
+            <p class="hint">Process multiple files sequentially.</p>
+            <div id="batch-file-list" class="hidden" style="margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid var(--surface3); border-radius: 4px; padding: 8px;">
+              <!-- Batch files listed here -->
+            </div>
+          </div>
+
+          <!-- Output Format Options -->
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--surface3);">
+            <label class="lbl">Output Options</label>
+            <label class="checkbox-row" style="margin-top: 8px;">
+              <input type="checkbox" id="include-timing-checkbox" checked />
+              <span>Include word-level timing</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="include-confidence-checkbox" />
+              <span>Show confidence scores</span>
+            </label>
+            <p class="hint">Affects transcript export format.</p>
+          </div>
         </div>
       </div>
 
@@ -140,9 +166,42 @@
             </div>
             <p id="progress-text" class="hint" style="text-align: center; margin-top: 10px;">Initializing&hellip;</p>
           </div>
+
+          <!-- Metrics Panel -->
+          <div id="metrics-panel" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; padding: 12px; background: var(--surface3); border-radius: 6px;">
+            <div class="metric-item">
+              <span class="metric-label">Transcription Speed</span>
+              <span class="metric-value" id="speed-metric">— sec/token</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Detected Language</span>
+              <span class="metric-value" id="language-metric">—</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Processing Time</span>
+              <span class="metric-value" id="time-metric">— sec</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Tokens/Second</span>
+              <span class="metric-value" id="tokens-metric">—</span>
+            </div>
+          </div>
+
           <audio id="media-player" style="display: none;"></audio>
           <input type="range" id="media-seekbar" class="media-seekbar" min="0" max="100" value="0" disabled style="width: 100%; margin-top: 12px;" />
+          
+          <!-- Preview with detailed info toggle -->
+          <div style="margin-top: 12px;">
+            <label class="checkbox-row">
+              <input type="checkbox" id="detailed-info-toggle" />
+              <span>Show segment details</span>
+            </label>
+          </div>
+
           <div id="preview-text" class="preview-text" style="margin-top: 12px;">Transcription will appear here as it streams&hellip;</div>
+          <div id="segment-details" class="hidden" style="margin-top: 12px; font-size: 0.7rem; color: var(--text-secondary); max-height: 150px; overflow-y: auto; border-top: 1px solid var(--surface3); padding-top: 8px;">
+            <!-- Segment timing details shown here -->
+          </div>
           <p class="hint">Transcription is processed in real time. You can edit it after completion.</p>
         </div>
       </div>
