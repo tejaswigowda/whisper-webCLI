@@ -58,8 +58,12 @@ whisper-webCLI covers the common transcription tasks for free, with audio that
 
 ## Usage
 
-### ▤ 1 · Select Audio or Video
-Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
+### ▤ 1 · Select Audio Input
+Choose one of two input modes:
+
+**📁 Upload File** — Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
+
+**🎤 Recording** — Click to start recording directly from your microphone. Real-time waveform visualization shows your audio levels. Duration and sample rate are displayed throughout the recording.
 
 ### ⚙ 2 · Configure
 Pick a **model** (tiny → medium) and a **language** (auto-detect or explicit). Optionally enable **Translate to English** to convert non-English speech to English text.
