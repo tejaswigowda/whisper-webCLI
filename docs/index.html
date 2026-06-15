@@ -153,6 +153,14 @@
             </label>
             <p class="hint">Affects transcript export format.</p>
           </div>
+
+          <!-- Raw Command Line Flags -->
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--surface3);">
+            <label class="lbl" for="raw-flags-input">Raw Flags</label>
+            <textarea id="raw-flags-input" placeholder="--language en --beam-size 10 --temperature 0.3" style="width: 100%; height: 60px; padding: 8px; font-family: 'SF Mono', 'Courier New', monospace; font-size: 0.75rem; background: var(--surface); border: 1px solid var(--surface3); border-radius: 4px; color: var(--text); resize: vertical; margin-top: 6px;"></textarea>
+            <p class="hint" style="margin-top: 6px;">Supported: --language, --beam-size, --temperature, --translate, --model. One per line or space-separated.</p>
+            <div id="flags-status" style="margin-top: 8px; font-size: 0.7rem; color: var(--muted); display: none;"></div>
+          </div>
         </div>
       </div>
 

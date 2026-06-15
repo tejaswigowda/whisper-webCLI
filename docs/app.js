@@ -177,6 +177,14 @@ class WhisperApp {
       });
     }
 
+    // Raw command line flags input
+    const rawFlagsInput = document.getElementById('raw-flags-input');
+    if (rawFlagsInput) {
+      rawFlagsInput.addEventListener('input', (e) => {
+        this._applyRawFlags(e.target.value);
+      });
+    }
+
     // Transcribe button
     const transcribeBtn = document.getElementById('transcribe-button');
     if (transcribeBtn) {
@@ -741,6 +749,138 @@ class WhisperApp {
       return `${minutes}m ${secs}s`;
     } else {
       return `${secs}s`;
+    }
+  }
+
+  /**
+   * Parse and apply raw command line flags
+   * Supports: --language, --beam-size, --temperature, --translate, --model
+   */
+  _applyRawFlags(flagsString) {
+    const statusEl = document.getElementById('flags-status');
+    const applied = [];
+    const errors = [];
+
+    if (!flagsString.trim()) {
+      statusEl.style.display = 'none';
+      return;
+    }
+
+    // Parse flags: split by whitespace or newlines, handle --flag value pairs
+    const tokens = flagsString.trim().split(/[\s\n]+/).filter(t => t);
+    let i = 0;
+    while (i < tokens.length) {
+      const token = tokens[i];
+      
+      if (token.startsWith('--')) {
+        const flag = token.substring(2);
+        const value = tokens[i + 1];
+
+        try {
+          switch (flag) {
+            case 'language': {
+              if (value && !value.startsWith('--')) {
+                const langSelect = document.getElementById('language-select');
+                if (langSelect) {
+                  langSelect.value = value;
+                  this.selectedLanguage = value;
+                  applied.push(`language=${value}`);
+                  i += 2;
+                  continue;
+                }
+              }
+              break;
+            }
+
+            case 'beam-size': {
+              if (value && !value.startsWith('--')) {
+                const beamInput = document.getElementById('beam-size-input');
+                if (beamInput) {
+                  const numValue = parseInt(value, 10);
+                  if (numValue >= 1 && numValue <= 20) {
+                    beamInput.value = numValue;
+                    applied.push(`beam-size=${numValue}`);
+                    i += 2;
+                    continue;
+                  } else {
+                    errors.push('beam-size must be 1-20');
+                  }
+                }
+              }
+              break;
+            }
+
+            case 'temperature': {
+              if (value && !value.startsWith('--')) {
+                const tempInput = document.getElementById('temperature-input');
+                if (tempInput) {
+                  const numValue = parseFloat(value);
+                  if (numValue >= 0 && numValue <= 1) {
+                    tempInput.value = numValue;
+                    applied.push(`temperature=${numValue}`);
+                    i += 2;
+                    continue;
+                  } else {
+                    errors.push('temperature must be 0-1');
+                  }
+                }
+              }
+              break;
+            }
+
+            case 'model': {
+              if (value && !value.startsWith('--')) {
+                const modelSelect = document.getElementById('model-select');
+                if (modelSelect && Array.from(modelSelect.options).some(opt => opt.value === value)) {
+                  modelSelect.value = value;
+                  this.selectedModel = value;
+                  applied.push(`model=${value}`);
+                  i += 2;
+                  continue;
+                } else {
+                  errors.push(`model '${value}' not available`);
+                }
+              }
+              break;
+            }
+
+            case 'translate': {
+              const translateCheck = document.getElementById('translate-checkbox');
+              if (translateCheck) {
+                translateCheck.checked = true;
+                this.translateToEnglish = true;
+                applied.push('translate=enabled');
+                i += 1;
+                continue;
+              }
+              break;
+            }
+
+            default: {
+              errors.push(`unknown flag: --${flag}`);
+              break;
+            }
+          }
+        } catch (err) {
+          errors.push(`error parsing --${flag}: ${err.message}`);
+        }
+      }
+      i++;
+    }
+
+    // Display status
+    const messages = [];
+    if (applied.length > 0) {
+      messages.push(`✓ Applied: ${applied.join(', ')}`);
+    }
+    if (errors.length > 0) {
+      messages.push(`⚠ ${errors.join('; ')}`);
+    }
+
+    if (messages.length > 0) {
+      statusEl.textContent = messages.join(' | ');
+      statusEl.style.display = 'block';
+      statusEl.style.color = errors.length > 0 ? 'var(--warn)' : 'var(--success)';
     }
   }
 }
