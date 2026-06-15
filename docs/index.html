@@ -51,10 +51,11 @@
         <div class="card">
           <div class="card-header">&#9636; Step 1 &middot; Select Audio or Video</div>
           <div class="card-body">
-            <!-- Mode Selector: File vs Microphone -->
+            <!-- Mode Selector: File vs Microphone vs Live Stream -->
             <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-              <button id="mode-file-btn" class="btn btn-mode active" data-mode="file" style="flex: 1;">📁 Upload File</button>
-              <button id="mode-mic-btn" class="btn btn-mode" data-mode="mic" style="flex: 1;">🎤 Microphone</button>
+              <button id="mode-file-btn" class="btn btn-mode active" onclick="window.switchInputMode && window.switchInputMode('file')" style="flex: 1;">📁 Upload File</button>
+              <button id="mode-mic-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('mic')" style="flex: 1;">🎤 Recording</button>
+              <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none;">🌐 Live Stream</button>
             </div>
 
             <!-- File Upload Mode -->
@@ -79,7 +80,7 @@
             <div id="mic-mode" class="input-mode hidden">
               <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
                 <p class="hint">Click below to start recording from your microphone.</p>
-                <button id="mic-start-btn" class="btn btn-primary" style="margin-top: 12px; padding: 12px 24px;">
+                <button id="mic-start-btn" class="btn btn-primary" onclick="window.startMicRecording && window.startMicRecording()" style="margin-top: 12px; padding: 12px 24px;">
                   🔴 Start Recording
                 </button>
                 <p id="mic-status" class="hint" style="margin-top: 10px; min-height: 20px;"></p>
@@ -91,7 +92,7 @@
                     <div style="font-weight: 700; color: var(--danger);">🔴 Recording</div>
                     <p id="recording-time" class="hint">0:00 elapsed</p>
                   </div>
-                  <button id="mic-stop-btn" class="btn btn-danger">⏹ Stop</button>
+                  <button id="mic-stop-btn" class="btn btn-danger" onclick="window.stopMicRecording && window.stopMicRecording()">⏹ Stop</button>
                 </div>
                 <div id="mic-waveform-container" style="margin-top: 12px;">
                   <canvas id="mic-waveform" style="width: 100%; height: 60px; background: #080a10; border-radius: 4px; display: block;"></canvas>
@@ -101,6 +102,35 @@
               <div class="file-meta-list" id="mic-meta-list" style="margin-top: 12px;">
                 <div><span class="lbl">Duration</span> <span id="mic-duration">&mdash;</span></div>
                 <div><span class="lbl">Sample Rate</span> <span id="mic-sample-rate">&mdash;</span></div>
+              </div>
+            </div>
+
+            <!-- Live Stream Mode -->
+            <div id="stream-mode" class="input-mode hidden">
+              <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
+                <p class="hint">Click below to start live transcription. Audio is processed in 5-second chunks.</p>
+                <button id="stream-start-btn" class="btn btn-primary" onclick="window.startLiveStream && window.startLiveStream()" style="margin-top: 12px; padding: 12px 24px;">
+                  🟢 Start Streaming
+                </button>
+                <p id="stream-status" class="hint" style="margin-top: 10px; min-height: 20px;"></p>
+              </div>
+
+              <div id="stream-active-panel" class="hidden" style="margin-top: 14px; padding: 12px; background: var(--surface3); border-radius: 6px; border: 1px solid var(--accent);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-weight: 700; color: var(--accent);">🟢 Streaming Live</div>
+                    <p id="stream-time" class="hint">0:00 elapsed</p>
+                  </div>
+                  <button id="stream-stop-btn" class="btn btn-danger" onclick="window.stopLiveStream && window.stopLiveStream()">⏹ Stop</button>
+                </div>
+                <div id="stream-waveform-container" style="margin-top: 12px;">
+                  <canvas id="stream-waveform" style="width: 100%; height: 60px; background: #080a10; border-radius: 4px; display: block;"></canvas>
+                </div>
+              </div>
+
+              <div class="file-meta-list" id="stream-meta-list" style="margin-top: 12px;">
+                <div><span class="lbl">Duration</span> <span id="stream-duration">&mdash;</span></div>
+                <div><span class="lbl">Sample Rate</span> <span id="stream-sample-rate">&mdash;</span></div>
               </div>
             </div>
           </div>
@@ -310,8 +340,81 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
 
     <!-- Scripts -->
-    <script src="model-manager.js"></script>
-    <script src="format-exporter.js"></script>
-    <script src="app.js"></script>
+    <script src="model-manager.js?v=5"></script>
+    <script src="format-exporter.js?v=5"></script>
+    <script src="app.js?v=5"></script>
+    
+    <!-- Global API setup for HTML onclick handlers -->
+    <script>
+      // Ensure app instance exists and expose global functions
+      function ensureAppAndAPI() {
+        if (typeof WhisperApp === 'undefined') {
+          setTimeout(ensureAppAndAPI, 100);
+          return;
+        }
+        
+        // Create global app instance if it doesn't exist
+        if (!window.app) {
+          window.app = new WhisperApp();
+          window.app.init();
+        }
+        
+        // Expose global functions for onclick handlers (safe guards included)
+        window.switchInputMode = function(mode) {
+          if (window.app && typeof window.app._switchInputMode === 'function') {
+            window.app._switchInputMode(mode);
+          } else {
+            console.warn('App not ready for switchInputMode');
+          }
+        };
+        
+        window.startMicRecording = function() {
+          if (window.app && typeof window.app._startMicRecording === 'function') {
+            window.app._startMicRecording().catch(err => {
+              console.error('Error starting recording:', err);
+            });
+          } else {
+            console.warn('App not ready for startMicRecording');
+          }
+        };
+        
+        window.stopMicRecording = function() {
+          if (window.app && typeof window.app._stopMicRecording === 'function') {
+            window.app._stopMicRecording().catch(err => {
+              console.error('Error stopping recording:', err);
+            });
+          } else {
+            console.warn('App not ready for stopMicRecording');
+          }
+        };
+
+        window.startLiveStream = function() {
+          if (window.app && typeof window.app._startLiveStream === 'function') {
+            window.app._startLiveStream().catch(err => {
+              console.error('Error starting stream:', err);
+            });
+          } else {
+            console.warn('App not ready for startLiveStream');
+          }
+        };
+
+        window.stopLiveStream = function() {
+          if (window.app && typeof window.app._stopLiveStream === 'function') {
+            window.app._stopLiveStream().catch(err => {
+              console.error('Error stopping stream:', err);
+            });
+          } else {
+            console.warn('App not ready for stopLiveStream');
+          }
+        };
+      }
+      
+      // Start checking for app availability
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureAppAndAPI);
+      } else {
+        ensureAppAndAPI();
+      }
+    </script>
   </body>
 </html>

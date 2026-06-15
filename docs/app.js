@@ -37,8 +37,8 @@ class WhisperApp {
     this.batchCurrentIndex = 0;
     this.batchResults = [];
 
-    // Microphone / Live transcription
-    this.inputMode = 'file'; // 'file' or 'mic'
+    // Microphone recording
+    this.inputMode = 'file'; // 'file', 'mic', or 'stream'
     this.mediaStream = null;
     this.audioContext = null;
     this.audioWorklet = null;
@@ -47,6 +47,17 @@ class WhisperApp {
     this.micAudioBuffer = new Float32Array(0);
     this.recordedAudio = null;
     this.recordedSampleRate = null;
+
+    // Live streaming
+    this.isStreaming = false;
+    this.streamStartTime = null;
+    this.streamAudioBuffer = new Float32Array(0);
+    this.streamChunkSize = 2; // seconds
+    this.streamChunkIntervalId = null;
+    this.streamTotalDuration = 0;
+    this.streamChunkCount = 0;
+    this.isStreamChunkProcessing = false; // Prevent overlapping chunk processing
+    this.streamAccumulatedText = ''; // Accumulate transcription during streaming
   }
 
   /**
@@ -54,6 +65,7 @@ class WhisperApp {
    */
   async init() {
     console.log('Initializing whisper-webCLI...');
+    window._initCalled = true;  // Debug flag
 
     // Initialize model manager
     await this.modelManager.init();
@@ -196,12 +208,18 @@ class WhisperApp {
       });
     }
 
-    // Input mode switching (File vs Microphone)
+    // Input mode switching
     const modeFileBtn = document.getElementById('mode-file-btn');
     const modeMicBtn = document.getElementById('mode-mic-btn');
-    if (modeFileBtn && modeMicBtn) {
+    const modeStreamBtn = document.getElementById('mode-stream-btn');
+    if (modeFileBtn) {
       modeFileBtn.addEventListener('click', () => this._switchInputMode('file'));
+    }
+    if (modeMicBtn) {
       modeMicBtn.addEventListener('click', () => this._switchInputMode('mic'));
+    }
+    if (modeStreamBtn) {
+      modeStreamBtn.addEventListener('click', () => this._switchInputMode('stream'));
     }
 
     // Microphone controls
@@ -212,6 +230,16 @@ class WhisperApp {
     }
     if (micStopBtn) {
       micStopBtn.addEventListener('click', () => this._stopMicRecording());
+    }
+
+    // Stream controls
+    const streamStartBtn = document.getElementById('stream-start-btn');
+    const streamStopBtn = document.getElementById('stream-stop-btn');
+    if (streamStartBtn) {
+      streamStartBtn.addEventListener('click', () => this._startLiveStream());
+    }
+    if (streamStopBtn) {
+      streamStopBtn.addEventListener('click', () => this._stopLiveStream());
     }
 
     // Transcribe button
@@ -295,11 +323,7 @@ class WhisperApp {
   }
 
   /**
-   * Handle transcription
-   */
-  /**
    * Decode audio file to AudioBuffer and convert to transferable format
-   * AudioBuffer cannot be cloned, so we convert to Float32Array
    */
   async _decodeAudioFile(file) {
     const arrayBuffer = await file.arrayBuffer();
@@ -408,14 +432,21 @@ class WhisperApp {
 
     switch (type) {
       case 'result':
-        this._handleTranscriptionComplete(segments);
+        // If streaming, clear the chunk processing flag to allow next chunk
+        if (this.isStreaming) {
+          this.isStreamChunkProcessing = false;
+        } else {
+          this._handleTranscriptionComplete(segments);
+        }
         break;
       case 'progress':
         this._updateTranscriptionProgress(progress);
         break;
       case 'error':
         this._showAlert(`Transcription error: ${message}`, 'error');
+        // Clear both flags on error
         this.isTranscribing = false;
+        this.isStreamChunkProcessing = false;
         document.getElementById('transcribe-button').disabled = false;
         document.getElementById('progress-container').classList.add('hidden');
         this._releaseWakeLock();
@@ -491,6 +522,24 @@ class WhisperApp {
 
     // Live streaming transcription in preview
     if (segments && segments.length > 0) {
+      // For streaming mode: accumulate and display in real-time
+      if (this.isStreaming) {
+        const newText = segments.map((seg) => seg.text).join(' ');
+        if (newText && !this.streamAccumulatedText.includes(newText)) {
+          // Append new text (avoid duplicates from overlapping segments)
+          this.streamAccumulatedText += (this.streamAccumulatedText ? ' ' : '') + newText;
+        }
+        
+        // Display accumulated text in Step 3
+        const previewText = document.getElementById('preview-text');
+        if (previewText) {
+          previewText.textContent = this.streamAccumulatedText;
+          previewText.scrollTop = previewText.scrollHeight;
+        }
+        return; // Skip file/mic mode logic below
+      }
+
+      // For file/mic mode: show full transcription
       const previewText = document.getElementById('preview-text');
       if (previewText) {
         const text = segments.map((seg) => seg.text).join('\n');
@@ -547,29 +596,53 @@ class WhisperApp {
       document.getElementById('language-metric').textContent = detectedLang;
     }
 
-    // Hide preview, show editor (Step 4)
-    const previewContainer = document.getElementById('preview-container');
-    previewContainer.classList.add('hidden');
+    // For streaming mode: finalize accumulated text and show editor
+    if (this.inputMode === 'stream') {
+      const previewContainer = document.getElementById('preview-container');
+      previewContainer.classList.add('hidden');
 
-    const transcriptContainer = document.getElementById('transcript-container');
-    transcriptContainer.classList.remove('hidden');
+      const transcriptContainer = document.getElementById('transcript-container');
+      transcriptContainer.classList.remove('hidden');
 
-    const downloadSection = document.getElementById('download-section');
-    downloadSection.classList.remove('hidden');
+      const downloadSection = document.getElementById('download-section');
+      downloadSection.classList.remove('hidden');
 
-    // Initialize Quill editor with the transcript
-    const text = segments.map((seg) => seg.text).join('\n');
-    this._initializeQuillEditor(text);
+      // Initialize Quill with accumulated text
+      this._initializeQuillEditor(this.streamAccumulatedText);
 
-    // Hide progress, update to 100%
-    const progressContainer = document.getElementById('progress-container');
-    progressContainer.classList.add('hidden');
+      // Reset streaming text accumulation
+      this.streamAccumulatedText = '';
 
-    // Show success message
-    this._showAlert(
-      `✓ Transcription complete (${segments.length} segments)`,
-      'success'
-    );
+      // Hide progress
+      const progressContainer = document.getElementById('progress-container');
+      progressContainer.classList.add('hidden');
+
+      this._showAlert('✓ Stream transcription complete', 'success');
+    } else {
+      // For file/mic mode: hide preview, show editor
+      const previewContainer = document.getElementById('preview-container');
+      previewContainer.classList.add('hidden');
+
+      const transcriptContainer = document.getElementById('transcript-container');
+      transcriptContainer.classList.remove('hidden');
+
+      const downloadSection = document.getElementById('download-section');
+      downloadSection.classList.remove('hidden');
+
+      // Initialize Quill editor with the transcript
+      const text = segments.map((seg) => seg.text).join('\n');
+      this._initializeQuillEditor(text);
+
+      // Hide progress
+      const progressContainer = document.getElementById('progress-container');
+      progressContainer.classList.add('hidden');
+
+      // Show success message
+      this._showAlert(
+        `✓ Transcription complete (${segments.length} segments)`,
+        'success'
+      );
+    }
 
     // Enable download buttons
     document.getElementById('download-txt').disabled = false;
@@ -712,38 +785,45 @@ class WhisperApp {
   }
 
   /**
-   * Switch between file upload and microphone input modes
+   * Switch between input modes (file, mic, stream)
    */
   _switchInputMode(mode) {
     this.inputMode = mode;
     
     const fileMode = document.getElementById('file-mode');
     const micMode = document.getElementById('mic-mode');
+    const streamMode = document.getElementById('stream-mode');
     const modeFileBtn = document.getElementById('mode-file-btn');
     const modeMicBtn = document.getElementById('mode-mic-btn');
+    const modeStreamBtn = document.getElementById('mode-stream-btn');
     const transcribeBtn = document.getElementById('transcribe-button');
 
+    // Hide all modes
+    fileMode?.classList.add('hidden');
+    micMode?.classList.add('hidden');
+    streamMode?.classList.add('hidden');
+    
+    // Remove active state from all buttons
+    modeFileBtn?.classList.remove('active');
+    modeMicBtn?.classList.remove('active');
+    modeStreamBtn?.classList.remove('active');
+
     if (mode === 'file') {
-      fileMode.classList.remove('hidden');
-      micMode.classList.add('hidden');
-      modeFileBtn.classList.add('active');
-      modeMicBtn.classList.remove('active');
-      
-      // Re-check if file is selected
+      fileMode?.classList.remove('hidden');
+      modeFileBtn?.classList.add('active');
       const fileInput = document.getElementById('audio-file');
-      transcribeBtn.disabled = !fileInput.files.length;
+      if (transcribeBtn) transcribeBtn.disabled = !fileInput.files.length;
     } else if (mode === 'mic') {
-      fileMode.classList.add('hidden');
-      micMode.classList.remove('hidden');
-      modeFileBtn.classList.remove('active');
-      modeMicBtn.classList.add('active');
-      
-      // Stop any existing recording
-      if (this.isRecording) {
-        this._stopMicRecording();
-      }
-      
-      transcribeBtn.disabled = true;
+      micMode?.classList.remove('hidden');
+      modeMicBtn?.classList.add('active');
+      if (this.isRecording) this._stopMicRecording();
+      if (this.isStreaming) this._stopLiveStream();
+      if (transcribeBtn) transcribeBtn.disabled = true;
+    } else if (mode === 'stream') {
+      streamMode?.classList.remove('hidden');
+      modeStreamBtn?.classList.add('active');
+      if (this.isRecording) this._stopMicRecording();
+      if (transcribeBtn) transcribeBtn.disabled = true;
     }
   }
 
@@ -752,12 +832,10 @@ class WhisperApp {
    */
   async _startMicRecording() {
     try {
-      // Request microphone access
       if (!this.mediaStream) {
         this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       }
 
-      // Initialize audio context if needed
       if (!this.audioContext) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
@@ -771,19 +849,13 @@ class WhisperApp {
       document.getElementById('mic-recording-panel').classList.remove('hidden');
       document.getElementById('mic-status').textContent = '🎙️ Listening...';
 
-      // Set up audio capture using ScriptProcessorNode (or AudioWorklet in future)
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-      const bufferSize = 4096;
-      const processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+      const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       processor.onaudioprocess = (event) => {
         const inputData = event.inputBuffer.getChannelData(0);
-        this._accumulateAudio(inputData);
-        
-        // Update waveform visualization
-        this._drawMicWaveform(inputData);
-        
-        // Update recording time
+        this._accumulateAudio(inputData, 'mic');
+        this._drawMicWaveform(inputData, 'mic');
         this._updateRecordingTime();
       };
 
@@ -803,21 +875,195 @@ class WhisperApp {
   }
 
   /**
-   * Accumulate audio samples from microphone
+   * Update recording elapsed time
    */
-  _accumulateAudio(inputData) {
-    const current = this.micAudioBuffer;
-    const newBuffer = new Float32Array(current.length + inputData.length);
-    newBuffer.set(current);
-    newBuffer.set(inputData, current.length);
-    this.micAudioBuffer = newBuffer;
+  _updateRecordingTime() {
+    if (!this.recordingStartTime) return;
+    
+    const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    const timeEl = document.getElementById('recording-time');
+    if (timeEl) {
+      timeEl.textContent = `${timeStr} elapsed`;
+    }
   }
 
   /**
-   * Draw waveform on canvas during recording
+   * Stop microphone recording
    */
-  _drawMicWaveform(audioData) {
-    const canvas = document.getElementById('mic-waveform');
+  async _stopMicRecording() {
+    try {
+      if (!this.isRecording) return;
+
+      this.isRecording = false;
+
+      if (this.audioWorklet) {
+        this.audioWorklet.disconnect();
+        this.audioWorklet = null;
+      }
+
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach(track => track.stop());
+        this.mediaStream = null;
+      }
+
+      this.recordedAudio = this.micAudioBuffer;
+      this.recordedSampleRate = this.audioContext.sampleRate;
+
+      const recordingDuration = this.recordedAudio.length / this.recordedSampleRate;
+      document.getElementById('mic-duration').textContent = this._formatSeconds(recordingDuration);
+
+      document.getElementById('mic-recording-panel').classList.add('hidden');
+      document.getElementById('mic-start-btn').disabled = false;
+      document.getElementById('mic-status').textContent = '✓ Recording saved. Ready to transcribe.';
+
+      document.getElementById('transcribe-button').disabled = false;
+
+      this._showAlert('✓ Recording stopped', 'success');
+    } catch (err) {
+      this._showAlert(`Error stopping recording: ${err.message}`, 'error');
+    }
+  }
+
+  /**
+   * Start live streaming with 5-second chunks
+   */
+  async _startLiveStream() {
+    try {
+      if (!this.mediaStream) {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      this.isStreaming = true;
+      this.streamStartTime = Date.now();
+      this.streamAudioBuffer = new Float32Array(0);
+      this.streamTotalDuration = 0;
+      this.streamChunkCount = 0;
+      this.streamAccumulatedText = ''; // Reset accumulated text
+      
+      // Show Step 3: preview with real-time transcription
+      this.metricsStartTime = Date.now();
+      document.getElementById('progress-container').classList.remove('hidden');
+      document.getElementById('preview-container').classList.remove('hidden');
+      document.getElementById('transcript-container').classList.add('hidden');
+      document.getElementById('download-section').classList.add('hidden');
+      document.getElementById('preview-text').textContent = ''; // Clear previous text
+      this._updateTranscriptionProgress({ pct: 0, label: 'Streaming… (0%)', segments: [] });
+      
+      document.getElementById('stream-start-btn').disabled = true;
+      document.getElementById('stream-active-panel').classList.remove('hidden');
+      document.getElementById('stream-status').textContent = '🟢 Streaming...';
+
+      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (event) => {
+        const inputData = event.inputBuffer.getChannelData(0);
+        this._accumulateAudio(inputData, 'stream');
+        this._drawMicWaveform(inputData, 'stream');
+        this._updateStreamTime();
+      };
+
+      source.connect(processor);
+      processor.connect(this.audioContext.destination);
+      this.audioWorklet = processor;
+
+      document.getElementById('stream-duration').textContent = '0:00';
+      document.getElementById('stream-sample-rate').textContent = `${this.audioContext.sampleRate} Hz`;
+
+      this.streamChunkIntervalId = setInterval(() => {
+        this._processStreamChunk();
+      }, this.streamChunkSize * 1000);
+
+      this._showAlert('🟢 Live streaming started (5s chunks)', 'success');
+    } catch (err) {
+      this._showAlert(`Microphone access denied: ${err.message}`, 'error');
+      this.isStreaming = false;
+      document.getElementById('stream-start-btn').disabled = false;
+    }
+  }
+
+  /**
+   * Process 5-second audio chunk
+   */
+  async _processStreamChunk() {
+    if (!this.isStreaming || this.streamAudioBuffer.length === 0) return;
+
+    // Skip if a chunk is already being processed (avoid overlapping transcriptions)
+    if (this.isStreamChunkProcessing) return;
+
+    const sampleRate = this.audioContext.sampleRate;
+    const audioSeconds = this.streamAudioBuffer.length / sampleRate;
+
+    if (audioSeconds < this.streamChunkSize - 0.5) return;
+
+    const samplesPerChunk = Math.floor(this.streamChunkSize * sampleRate);
+    const chunkData = new Float32Array(
+      this.streamAudioBuffer.slice(0, samplesPerChunk)
+    );
+
+    if (this.streamAudioBuffer.length > samplesPerChunk) {
+      this.streamAudioBuffer = new Float32Array(
+        this.streamAudioBuffer.slice(samplesPerChunk)
+      );
+    } else {
+      this.streamAudioBuffer = new Float32Array(0);
+    }
+
+    this.streamChunkCount++;
+    this.streamTotalDuration += this.streamChunkSize;
+
+    // Mark chunk as processing
+    this.isStreamChunkProcessing = true;
+
+    if (this.worker) {
+      this.worker.postMessage(
+        {
+          type: 'transcribe',
+          payload: {
+            audioBuffer: chunkData.buffer,
+            sampleRate: sampleRate,
+            options: {
+              model: this.selectedModel,
+              language: this.selectedLanguage,
+              translate: this.translateToEnglish,
+            },
+          },
+        },
+        [chunkData.buffer]
+      );
+    }
+  }
+
+  /**
+   * Accumulate audio samples
+   */
+  _accumulateAudio(inputData, mode = 'mic') {
+    const buffer = mode === 'stream' ? this.streamAudioBuffer : this.micAudioBuffer;
+    const newBuffer = new Float32Array(buffer.length + inputData.length);
+    newBuffer.set(buffer);
+    newBuffer.set(inputData, buffer.length);
+    
+    if (mode === 'stream') {
+      this.streamAudioBuffer = newBuffer;
+    } else {
+      this.micAudioBuffer = newBuffer;
+    }
+  }
+
+  /**
+   * Draw waveform visualization
+   */
+  _drawMicWaveform(audioData, mode = 'mic') {
+    const canvasId = mode === 'stream' ? 'stream-waveform' : 'mic-waveform';
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -827,7 +1073,7 @@ class WhisperApp {
     ctx.fillStyle = '#080a10';
     ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = '#3665b6';
+    ctx.strokeStyle = mode === 'stream' ? '#00ff00' : '#3665b6';
     ctx.lineWidth = 2;
     ctx.beginPath();
 
@@ -852,32 +1098,62 @@ class WhisperApp {
   }
 
   /**
-   * Update recording elapsed time display
+   * Update stream elapsed time
    */
-  _updateRecordingTime() {
-    if (!this.recordingStartTime) return;
+  _updateStreamTime() {
+    if (!this.streamStartTime) return;
     
-    const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+    const elapsed = Math.floor((Date.now() - this.streamStartTime) / 1000);
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const timeEl = document.getElementById('recording-time');
+    const timeEl = document.getElementById('stream-time');
     if (timeEl) {
       timeEl.textContent = `${timeStr} elapsed`;
     }
   }
 
   /**
-   * Stop microphone recording and prepare for transcription
+   * Stop live streaming
    */
-  async _stopMicRecording() {
+  async _stopLiveStream() {
     try {
-      if (!this.isRecording) return;
+      if (!this.isStreaming) return;
 
-      this.isRecording = false;
+      this.isStreaming = false;
 
-      // Stop audio capture
+      if (this.streamChunkIntervalId) {
+        clearInterval(this.streamChunkIntervalId);
+        this.streamChunkIntervalId = null;
+      }
+
+      // Reset chunk processing flag
+      this.isStreamChunkProcessing = false;
+
+      if (this.streamAudioBuffer.length > 0) {
+        const sampleRate = this.audioContext.sampleRate;
+        const remainingData = new Float32Array(this.streamAudioBuffer);
+        
+        if (this.worker) {
+          this.worker.postMessage(
+            {
+              type: 'transcribe',
+              payload: {
+                audioBuffer: remainingData.buffer,
+                sampleRate: sampleRate,
+                options: {
+                  model: this.selectedModel,
+                  language: this.selectedLanguage,
+                  translate: this.translateToEnglish,
+                },
+              },
+            },
+            [remainingData.buffer]
+          );
+        }
+      }
+
       if (this.audioWorklet) {
         this.audioWorklet.disconnect();
         this.audioWorklet = null;
@@ -888,24 +1164,16 @@ class WhisperApp {
         this.mediaStream = null;
       }
 
-      // Store recording info
-      this.recordedAudio = this.micAudioBuffer;
-      this.recordedSampleRate = this.audioContext.sampleRate;
+      const streamDuration = this.streamTotalDuration + (this.streamAudioBuffer.length / this.audioContext.sampleRate);
+      document.getElementById('stream-duration').textContent = this._formatSeconds(streamDuration);
 
-      const recordingDuration = this.recordedAudio.length / this.recordedSampleRate;
-      document.getElementById('mic-duration').textContent = this._formatSeconds(recordingDuration);
+      document.getElementById('stream-active-panel').classList.add('hidden');
+      document.getElementById('stream-start-btn').disabled = false;
+      document.getElementById('stream-status').textContent = '✓ Stream finished. Processing final chunk...';
 
-      // Hide recording panel
-      document.getElementById('mic-recording-panel').classList.add('hidden');
-      document.getElementById('mic-start-btn').disabled = false;
-      document.getElementById('mic-status').textContent = '✓ Recording saved. Ready to transcribe.';
-
-      // Enable transcribe button
-      document.getElementById('transcribe-button').disabled = false;
-
-      this._showAlert('✓ Recording stopped', 'success');
+      this._showAlert(`✓ Stream stopped (${this.streamChunkCount} chunks processed)`, 'success');
     } catch (err) {
-      this._showAlert(`Error stopping recording: ${err.message}`, 'error');
+      this._showAlert(`Error stopping stream: ${err.message}`, 'error');
     }
   }
 
@@ -1001,7 +1269,6 @@ class WhisperApp {
 
   /**
    * Parse and apply raw command line flags
-   * Supports: --language, --beam-size, --temperature, --translate, --model
    */
   _applyRawFlags(flagsString) {
     const statusEl = document.getElementById('flags-status');
@@ -1013,7 +1280,6 @@ class WhisperApp {
       return;
     }
 
-    // Parse flags: split by whitespace or newlines, handle --flag value pairs
     const tokens = flagsString.trim().split(/[\s\n]+/).filter(t => t);
     let i = 0;
     while (i < tokens.length) {
@@ -1115,7 +1381,6 @@ class WhisperApp {
       i++;
     }
 
-    // Display status
     const messages = [];
     if (applied.length > 0) {
       messages.push(`✓ Applied: ${applied.join(', ')}`);
@@ -1134,6 +1399,6 @@ class WhisperApp {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  const app = new WhisperApp();
-  app.init();
+  window.app = new WhisperApp();
+  window.app.init();
 });
