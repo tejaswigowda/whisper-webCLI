@@ -2,7 +2,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/tejaswigowda/whisper-webCLI?style=social)](https://github.com/tejaswigowda/whisper-webCLI/stargazers)
 
-A browser-based speech-to-text transcriber powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) and OpenAI's Whisper model. <b><ins>No uploads, no servers -- all processing happens locally</ins></b> in your browser using WebAssembly.
+A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b><ins>No uploads, no servers -- all processing happens locally</ins></b> in your browser using [Transformers.js](https://xenova.github.io/transformers.js/) and ONNX models.
 
 ▶ **Live app:** https://tejaswigowda.com/whisper-webCLI/
 
@@ -14,7 +14,7 @@ A browser-based speech-to-text transcriber powered by [whisper.cpp](https://gith
 
 ✓ **No Server Uploads**: All transcription happens entirely on your device - audio is never sent anywhere
 
-✓ **OpenAI Whisper** : High-quality multilingual speech recognition running locally via whisper.cpp WASM
+✓ **OpenAI Whisper** : High-quality multilingual speech recognition running locally via ONNX models (Transformers.js)
 
 ✓ **Multiple Export Formats** : Plain text (.txt), SubRip (.srt), and WebVTT (.vtt)
 
@@ -101,13 +101,14 @@ Export the transcript as **.txt**, **.srt**, or **.vtt** - ready for documents, 
 
 ## How It Works
 
-whisper-webCLI brings OpenAI's Whisper model to the browser:
+whisper-webCLI brings OpenAI's Whisper model to the browser via Transformers.js:
 
-1. **WASM compilation** - Whisper is compiled to WebAssembly via [whisper.cpp](https://github.com/ggerganov/whisper.cpp).
-2. **Browser execution** - The WASM binary and model weights run entirely client-side in a Web Worker.
-3. **Zero network egress** - Audio never leaves your device; only static assets and model weights are downloaded.
-4. **PWA deployment** - A service worker caches the WASM binary and assets for offline use.
-5. **Model caching** - Model weights are cached in IndexedDB for reuse without re-downloading.
+1. **ONNX models** - Whisper is exported as ONNX (Open Neural Network Exchange) format, enabling portable inference.
+2. **Transformers.js runtime** - The [Transformers.js](https://xenova.github.io/transformers.js/) library loads and runs ONNX models in the browser using WebAssembly and WebGPU when available.
+3. **Browser execution** - Model weights run entirely client-side in a Web Worker, powered by ONNX Runtime.
+4. **Zero network egress** - Audio never leaves your device; only static assets and model weights are downloaded.
+5. **PWA deployment** - A service worker caches static assets and the ONNX runtime for offline use.
+6. **Model caching** - Model weights are cached in IndexedDB for reuse without re-downloading.
 
 ```
 ┌─────────────────────────────────────┐
@@ -130,12 +131,13 @@ whisper-webCLI brings OpenAI's Whisper model to the browser:
     └────────────┬────────────┘
                  ▼
         ┌─────────────────────┐
-        │ transcriber.js      │
-        │ (reusable engine)   │
-        │ - whisper.cpp WASM  │
-        │ - audio processing  │
-        │ - segment parsing   │
-        └─────────────────────┘
+        │ transcriber.js              │
+        │ (reusable engine)           │
+        │ - Transformers.js + ONNX    │
+        │ - Hugging Face Hub models   │
+        │ - audio processing          │
+        │ - segment parsing           │
+        └─────────────────────────────┘
 ```
 
 ---
@@ -149,12 +151,12 @@ whisper-webCLI brings OpenAI's Whisper model to the browser:
 
 **Data storage:**
 - Model weights cached locally in IndexedDB (survives browser restart).
-- Service worker caches static assets and the WASM binary.
+- Service worker caches static assets and the ONNX runtime.
 - No data is sent to any server.
 
 **Cross-origin isolation:**
 - The server sets `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
-- This enables `SharedArrayBuffer` for multi-threaded WASM.
+- This enables `SharedArrayBuffer` for multi-threaded ONNX inference.
 
 ---
 
@@ -200,7 +202,7 @@ docs/
 ├── index.html                # Main UI (webCLI look & feel, PWA manifest)
 ├── style.css                 # Dark theme, shared webCLI design tokens
 ├── app.js                    # App controller (UI + orchestration)
-├── transcriber.js            # Reusable transcription engine (WASM wrapper)
+├── transcriber.js            # Reusable transcription engine (Transformers.js wrapper)
 ├── model-manager.js          # Model download, cache, progress
 ├── format-exporter.js        # TXT / SRT / VTT conversion
 ├── transcription-worker.js   # Web Worker for transcription
@@ -238,13 +240,14 @@ const segments = await transcriber.transcribe(audioBuffer, {
 
 ## Dependencies
 
-**None** - pure browser APIs plus the whisper.cpp WASM build. Node.js is only used for the local development server.
+**None** - pure browser APIs plus Transformers.js and ONNX Runtime. Node.js is only used for the local development server.
 
 ---
 
 ## Acknowledgments
 
-- **whisper.cpp** - Georgi Gerganov (MIT)
+- **Transformers.js** - Xenova (MIT)
+- **ONNX Runtime** - Microsoft & community (MIT)
 - **OpenAI Whisper** - OpenAI Research (MIT)
 - **ffmpeg-webCLI** - sibling project and design inspiration
 
@@ -252,7 +255,7 @@ const segments = await transcriber.transcribe(audioBuffer, {
 
 ## License
 
-GPL-3.0 - see [LICENSE](LICENSE). OpenAI Whisper (MIT) and whisper.cpp (MIT) are compatible with GPL-3.0.
+GPL-3.0 - see [LICENSE](LICENSE). OpenAI Whisper (MIT), Transformers.js (MIT), and ONNX Runtime (MIT) are compatible with GPL-3.0.
 
 ---
 
