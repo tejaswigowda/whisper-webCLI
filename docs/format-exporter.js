@@ -57,10 +57,13 @@ class FormatExporter {
    * @returns {string} e.g., "00:00:15,500" (SRT) or "00:00:15.500" (VTT)
    */
   static _formatTimestamp(seconds, format) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.round((seconds % 1) * 1000);
+    // Ensure seconds is a valid number
+    const sec = typeof seconds === 'number' && !isNaN(seconds) ? seconds : 0;
+    
+    const hours = Math.floor(sec / 3600);
+    const minutes = Math.floor((sec % 3600) / 60);
+    const secs = Math.floor(sec % 60);
+    const ms = Math.round((sec % 1) * 1000);
 
     const pad = (n) => String(n).padStart(2, '0');
     const separator = format === 'srt' ? ',' : '.';

@@ -168,16 +168,31 @@ export class Transcriber {
    */
   _toSegments(result, totalDuration) {
     if (result && Array.isArray(result.chunks) && result.chunks.length) {
-      return result.chunks
+      // Pre-filter non-empty chunks and calculate duration for fallback
+      const nonEmptyChunks = result.chunks.filter((chunk) => (chunk.text || '').trim().length > 0);
+      const segmentDuration = totalDuration / nonEmptyChunks.length;
+      
+      return nonEmptyChunks
         .map((chunk, i) => {
           const [start, end] = chunk.timestamp || [];
+          const text = (chunk.text || '').trim();
+          
+          // If timestamps are available, use them
+          if (typeof start === 'number' && typeof end === 'number') {
+            return {
+              start,
+              end,
+              text,
+            };
+          }
+          
+          // Fallback: distribute segments evenly across total duration
           return {
-            start: typeof start === 'number' ? start : i,
-            end: typeof end === 'number' ? end : totalDuration,
-            text: (chunk.text || '').trim(),
+            start: i * segmentDuration,
+            end: (i + 1) * segmentDuration,
+            text,
           };
-        })
-        .filter((s) => s.text.length > 0);
+        });
     }
 
     // Fallback: single segment spanning the whole clip.

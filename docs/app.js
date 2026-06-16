@@ -702,14 +702,7 @@ class WhisperApp {
       editedText = this.currentTranscript.map((s) => s.text).join('\n');
     }
 
-    // If text was edited, reconstruct segments for formats that need timestamps
-    let segments = this.currentTranscript;
-    if (format !== 'txt' && editedText !== segments.map((s) => s.text).join('\n')) {
-      // Text was edited; for SRT/VTT, we'll use the edited text
-      // but maintain original timestamps for the first segment only
-      segments = [{ ...segments[0], text: editedText }];
-    }
-
+    let segments;
     let content;
     let filename;
 
@@ -717,9 +710,13 @@ class WhisperApp {
       content = editedText;
       filename = 'transcript.txt';
     } else if (format === 'srt') {
+      // For SRT: always use original segments to preserve timestamps
+      segments = this.currentTranscript;
       content = FormatExporter.toSRT(segments);
       filename = 'transcript.srt';
     } else if (format === 'vtt') {
+      // For VTT: always use original segments to preserve timestamps
+      segments = this.currentTranscript;
       content = FormatExporter.toVTT(segments);
       filename = 'transcript.vtt';
     }
