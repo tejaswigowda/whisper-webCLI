@@ -34,6 +34,8 @@ A browser-based speech-to-text transcriber powered by [whisper.cpp](https://gith
 
 ✓ **Privacy First** : Zero data collection, zero telemetry; works with your files locally
 
+✓ **Modular Design** : Reusable `transcriber.js` engine used by [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) for auto-captioning
+
 ---
 
 ## What It Replaces
@@ -210,16 +212,27 @@ server.js                     # Node.js dev server (COOP/COEP headers)
 
 ### Reuse in the webCLI family
 
-`transcriber.js` is designed to be reused by [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) to power an auto-caption feature:
+The core transcription engine (`transcriber.js`) is intentionally designed as a reusable module and is used by [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) to power its auto-caption feature. This decoupling allows the transcription logic to be maintained in one place and shared across projects:
 
 ```javascript
+// Example: Using transcriber.js in ffmpeg-webCLI
 import { Transcriber } from 'whisper-webCLI/transcriber.js';
 
 const transcriber = new Transcriber();
-await transcriber.init(wasmBinary);
-const segments = await transcriber.transcribe(audioBuffer, { model: 'base' });
-// segments: [{ id, start, end, text }, ...] → generate SRT, embed as soft subtitles
+const segments = await transcriber.transcribe(audioBuffer, {
+  model: 'base',
+  language: 'auto',
+  onProgress: (p) => console.log(`${p.pct}% complete`),
+});
+// segments: [{ start, end, text }, ...] 
+// → generate SRT, embed as soft subtitles, or use directly
 ```
+
+**Benefits:**
+- Single source of truth for Whisper transcription logic
+- Both projects stay in sync with improvements
+- Consistent timestamp and segment handling
+- Reusable for any browser-based speech-to-text need
 
 ---
 
