@@ -2,7 +2,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/tejaswigowda/whisper-webCLI?style=social)](https://github.com/tejaswigowda/whisper-webCLI/stargazers)
 
-A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b><ins>No uploads, no servers -- all processing happens locally</ins></b> in your browser using [Transformers.js](https://xenova.github.io/transformers.js/) and ONNX models.
+A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b><ins>No uploads, no servers. All processing happens locally</ins></b> in your browser using [Transformers.js](https://huggingface.co/docs/transformers.js) and ONNX models.
 
 ▶ **Live app:** https://tejaswigowda.com/whisper-webCLI/
 
@@ -12,29 +12,29 @@ A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b
 
 ## Key Features
 
-✓ **No Server Uploads**: All transcription happens entirely on your device - audio is never sent anywhere
+- **No Server Uploads**: All transcription happens entirely on your device - audio is never sent anywhere
 
-✓ **OpenAI Whisper** : High-quality multilingual speech recognition running locally via ONNX models (Transformers.js)
+- **OpenAI Whisper** : High-quality multilingual speech recognition running locally via ONNX models (Transformers.js)
 
-✓ **Multiple Export Formats** : Plain text (.txt), SubRip (.srt), and WebVTT (.vtt)
+- **Multiple Export Formats** : Plain text (.txt), SubRip (.srt), and WebVTT (.vtt)
 
-✓ **Editable Transcripts** : Rich-text editor (Quill) to correct and format the transcript before download
+- **Editable Transcripts** : Rich-text editor (Quill) to correct and format the transcript before download
 
-✓ **Offline-First PWA** : Works completely offline after first use; install as a native app
+- **Offline-First PWA** : Works completely offline after first use; install as a native app
 
-✓ **Model Caching** : Model weights are cached in IndexedDB and reused with no re-download
+- **Model Caching** : Model weights are cached in IndexedDB and reused with no re-download
 
-✓ **Multi-Language** : ~99 languages with auto-detection, or pick the language explicitly
+- **Multi-Language** : ~99 languages with auto-detection, or pick the language explicitly
 
-✓ **Translation** : Optionally translate non-English audio directly to English
+- **Translation** : Optionally translate non-English audio directly to English
 
-✓ **Screen Wake Lock** : Screen stays active during long transcriptions on any device
+- **Screen Wake Lock** : Screen stays active during long transcriptions on any device
 
-✓ **Fast & Responsive** : Transcription runs in a Web Worker to keep the UI smooth
+- **Fast & Responsive** : Transcription runs in a Web Worker to keep the UI smooth
 
-✓ **Privacy First** : Zero data collection, zero telemetry; works with your files locally
+- **Privacy First** : Zero data collection, zero telemetry; works with your files locally
 
-✓ **Modular Design** : Reusable `transcriber.js` engine used by [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) for auto-captioning
+- **Modular Design** : Reusable `transcriber.js` engine used by [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) for auto-captioning
 
 ---
 
@@ -50,7 +50,7 @@ A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b
 | Happy Scribe | Translation + transcription |
 
 **The difference that matters:** every one of those tools uploads your audio to a
-server. Some are free with limits, some charge per minute -- but all of them *hear your
+server. Some are free with limits, some charge per minute - but all of them *hear your
 audio*, and all are subject to data breaches, subpoenas, and privacy-policy changes.
 
 whisper-webCLI covers the common transcription tasks for free, with audio that
@@ -63,16 +63,16 @@ whisper-webCLI covers the common transcription tasks for free, with audio that
 ### ▤ 1 · Select Audio Input
 Choose one of two input modes:
 
-**📄 Upload File** - Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
+**Upload File** - Drag & drop or click to load a file. Supported inputs: MP3, WAV, M4A, OGG, FLAC, MP4, WebM, MOV. File name, size, and duration are shown once loaded.
 
-**♪ Recording** - Click to start recording directly from your microphone. Real-time waveform visualization shows your audio levels. Duration and sample rate are displayed throughout the recording.
+**Recording** - Click to start recording directly from your microphone. Real-time waveform visualization shows your audio levels. Duration and sample rate are displayed throughout the recording.
 
 ### ⚙ 2 · Configure
 Pick a **model** (tiny → medium) and a **language** (auto-detect or explicit). Optionally enable **Translate to English** to convert non-English speech to English text.
 
 ### ⊕ Advanced Settings
 Expand for fine control:
-- **Temperature** (0–1) - 0 is deterministic, higher is more creative.
+- **Temperature** (0 to 1) - 0 is deterministic, higher is more creative.
 - **Beam Size** - search width during decoding; higher is slower but more accurate.
 
 ### ◉ 3 · Preview
@@ -104,7 +104,7 @@ Export the transcript as **.txt**, **.srt**, or **.vtt** - ready for documents, 
 whisper-webCLI brings OpenAI's Whisper model to the browser via Transformers.js:
 
 1. **ONNX models** - Whisper is exported as ONNX (Open Neural Network Exchange) format, enabling portable inference.
-2. **Transformers.js runtime** - The [Transformers.js](https://xenova.github.io/transformers.js/) library loads and runs ONNX models in the browser using WebAssembly and WebGPU when available.
+2. **Transformers.js runtime** - The [Transformers.js](https://huggingface.co/docs/transformers.js) library loads and runs ONNX models in the browser using WebAssembly and WebGPU when available.
 3. **Browser execution** - Model weights run entirely client-side in a Web Worker, powered by ONNX Runtime.
 4. **Zero network egress** - Audio never leaves your device; only static assets and model weights are downloaded.
 5. **PWA deployment** - A service worker caches static assets and the ONNX runtime for offline use.

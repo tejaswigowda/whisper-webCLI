@@ -52,12 +52,15 @@ class WhisperApp {
     this.isStreaming = false;
     this.streamStartTime = null;
     this.streamAudioBuffer = new Float32Array(0);
-    this.streamChunkSize = 2; // seconds
+    this.streamChunkSize = 30; // seconds per chunk (longer = better Whisper quality)
+    this.streamOverlapSize = 5; // seconds of overlap prepended from previous chunk for context
+    this.streamOverlapBuffer = new Float32Array(0); // tail of last chunk for context
     this.streamChunkIntervalId = null;
     this.streamTotalDuration = 0;
     this.streamChunkCount = 0;
     this.isStreamChunkProcessing = false; // Prevent overlapping chunk processing
     this.streamAccumulatedText = ''; // Accumulate transcription during streaming
+    this.lastStreamSegmentEnd = 0; // Track last segment boundary to avoid overlaps
   }
 
   /**
@@ -432,8 +435,20 @@ class WhisperApp {
 
     switch (type) {
       case 'result':
-        // If streaming, clear the chunk processing flag to allow next chunk
+        // If streaming, update progress with final segments and clear flag
         if (this.isStreaming) {
+          if (segments && segments.length > 0) {
+            // Skip segments that fall within the overlap prefix to avoid duplicates.
+            // The overlap buffer was prepended, so segments with end <= overlapSize are repeats.
+            const newSegments = segments.filter(
+              (seg) => seg.end > this.streamOverlapSize
+            );
+            this._updateTranscriptionProgress({
+              pct: null,
+              label: 'Transcribing… (streaming)',
+              segments: newSegments.length > 0 ? newSegments : segments,
+            });
+          }
           this.isStreamChunkProcessing = false;
         } else {
           this._handleTranscriptionComplete(segments);
@@ -468,10 +483,14 @@ class WhisperApp {
     // Update progress bar with percentage
     if (typeof progress.pct === 'number') {
       const pct = progress.pct;
+      console.log('Progress update:', { pct, label, progressBarExists: !!progressBar });
       if (progressBar) {
         progressBar.style.width = `${pct}%`;
         progressBar.textContent = `${pct}%`;
         progressBar.classList.remove('indeterminate');
+        console.log('Progress bar updated:', { width: progressBar.style.width, text: progressBar.textContent });
+      } else {
+        console.warn('Progress bar element not found');
       }
       if (progressText) progressText.textContent = label;
     } else {
@@ -501,8 +520,8 @@ class WhisperApp {
       if (this.metricsStartTime) {
         const elapsedMs = Date.now() - this.metricsStartTime;
         const elapsedSec = (elapsedMs / 1000).toFixed(2);
-        const tokensPerSec = this.totalTokens > 0 ? (this.totalTokens / (elapsedSec / 1)).toFixed(1) : '—';
-        const secPerToken = this.totalTokens > 0 ? ((elapsedSec / this.totalTokens).toFixed(3)) : '—';
+        const tokensPerSec = this.totalTokens > 0 ? (this.totalTokens / (elapsedSec / 1)).toFixed(1) : '-';
+        const secPerToken = this.totalTokens > 0 ? ((elapsedSec / this.totalTokens).toFixed(3)) : '-';
 
         document.getElementById('speed-metric').textContent = secPerToken + ' sec/token';
         document.getElementById('time-metric').textContent = elapsedSec + ' sec';
@@ -522,14 +541,14 @@ class WhisperApp {
 
     // Live streaming transcription in preview
     if (segments && segments.length > 0) {
-      // For streaming mode: accumulate and display in real-time
+      // For streaming mode: each chunk is independently transcribed non-overlapping audio,
+      // so just append the new text directly.
       if (this.isStreaming) {
-        const newText = segments.map((seg) => seg.text).join(' ');
-        if (newText && !this.streamAccumulatedText.includes(newText)) {
-          // Append new text (avoid duplicates from overlapping segments)
+        const newText = segments.map((seg) => seg.text).join(' ').trim();
+        if (newText) {
           this.streamAccumulatedText += (this.streamAccumulatedText ? ' ' : '') + newText;
         }
-        
+
         // Display accumulated text in Step 3
         const previewText = document.getElementById('preview-text');
         if (previewText) {
@@ -612,12 +631,13 @@ class WhisperApp {
 
       // Reset streaming text accumulation
       this.streamAccumulatedText = '';
+      this.lastStreamSegmentEnd = 0; // Reset segment boundary tracking
 
       // Hide progress
       const progressContainer = document.getElementById('progress-container');
       progressContainer.classList.add('hidden');
 
-      this._showAlert('✓ Stream transcription complete', 'success');
+      this._showAlert('Stream transcription complete', 'success');
     } else {
       // For file/mic mode: hide preview, show editor
       const previewContainer = document.getElementById('preview-container');
@@ -639,7 +659,7 @@ class WhisperApp {
 
       // Show success message
       this._showAlert(
-        `✓ Transcription complete (${segments.length} segments)`,
+        `Transcription complete (${segments.length} segments)`,  
         'success'
       );
     }
@@ -734,10 +754,10 @@ class WhisperApp {
     alert.className = `alert alert-${type}`;
 
     const icons = {
-      success: '✓',
-      warning: '⚠',
-      error: '✕',
-      info: 'ℹ',
+      success: '<i class="fas fa-check"></i>',
+      warning: '<i class="fas fa-triangle-exclamation"></i>',
+      error: '<i class="fas fa-xmark"></i>',
+      info: '<i class="fas fa-circle-info"></i>',
     };
 
     alert.innerHTML = `
@@ -844,7 +864,7 @@ class WhisperApp {
       // Show recording panel
       document.getElementById('mic-start-btn').disabled = true;
       document.getElementById('mic-recording-panel').classList.remove('hidden');
-      document.getElementById('mic-status').textContent = '🎙️ Listening...';
+      document.getElementById('mic-status').innerHTML = '<i class="fas fa-microphone"></i> Listening...';
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
@@ -915,11 +935,11 @@ class WhisperApp {
 
       document.getElementById('mic-recording-panel').classList.add('hidden');
       document.getElementById('mic-start-btn').disabled = false;
-      document.getElementById('mic-status').textContent = '✓ Recording saved. Ready to transcribe.';
+      document.getElementById('mic-status').innerHTML = '<i class="fas fa-check"></i> Recording saved. Ready to transcribe.';
 
       document.getElementById('transcribe-button').disabled = false;
 
-      this._showAlert('✓ Recording stopped', 'success');
+      this._showAlert('Recording stopped', 'success');
     } catch (err) {
       this._showAlert(`Error stopping recording: ${err.message}`, 'error');
     }
@@ -941,9 +961,11 @@ class WhisperApp {
       this.isStreaming = true;
       this.streamStartTime = Date.now();
       this.streamAudioBuffer = new Float32Array(0);
+      this.streamOverlapBuffer = new Float32Array(0);
       this.streamTotalDuration = 0;
       this.streamChunkCount = 0;
       this.streamAccumulatedText = ''; // Reset accumulated text
+      this.lastStreamSegmentEnd = 0; // Reset segment boundary tracking
       
       // Show Step 3: preview with real-time transcription
       this.metricsStartTime = Date.now();
@@ -956,7 +978,7 @@ class WhisperApp {
       
       document.getElementById('stream-start-btn').disabled = true;
       document.getElementById('stream-active-panel').classList.remove('hidden');
-      document.getElementById('stream-status').textContent = '🟢 Streaming...';
+      document.getElementById('stream-status').innerHTML = '<i class="fas fa-circle" style="color:var(--accent)"></i> Streaming...';
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
@@ -979,7 +1001,7 @@ class WhisperApp {
         this._processStreamChunk();
       }, this.streamChunkSize * 1000);
 
-      this._showAlert('🟢 Live streaming started (5s chunks)', 'success');
+      this._showAlert('Live streaming started (15s chunks, 5s overlap)', 'success');
     } catch (err) {
       this._showAlert(`Microphone access denied: ${err.message}`, 'error');
       this.isStreaming = false;
@@ -988,7 +1010,7 @@ class WhisperApp {
   }
 
   /**
-   * Process 5-second audio chunk
+   * Process audio chunk for live streaming
    */
   async _processStreamChunk() {
     if (!this.isStreaming || this.streamAudioBuffer.length === 0) return;
@@ -1002,10 +1024,18 @@ class WhisperApp {
     if (audioSeconds < this.streamChunkSize - 0.5) return;
 
     const samplesPerChunk = Math.floor(this.streamChunkSize * sampleRate);
-    const chunkData = new Float32Array(
-      this.streamAudioBuffer.slice(0, samplesPerChunk)
-    );
+    const newAudio = this.streamAudioBuffer.slice(0, samplesPerChunk);
 
+    // Prepend overlap from previous chunk so Whisper has context
+    const chunkData = new Float32Array(this.streamOverlapBuffer.length + newAudio.length);
+    chunkData.set(this.streamOverlapBuffer);
+    chunkData.set(newAudio, this.streamOverlapBuffer.length);
+
+    // Save tail of this new audio as overlap for the next chunk
+    const overlapSamples = Math.floor(this.streamOverlapSize * sampleRate);
+    this.streamOverlapBuffer = new Float32Array(newAudio.slice(-overlapSamples));
+
+    // Advance the incoming buffer past the consumed chunk
     if (this.streamAudioBuffer.length > samplesPerChunk) {
       this.streamAudioBuffer = new Float32Array(
         this.streamAudioBuffer.slice(samplesPerChunk)
@@ -1031,6 +1061,8 @@ class WhisperApp {
               model: this.selectedModel,
               language: this.selectedLanguage,
               translate: this.translateToEnglish,
+              // Tell transcriber to skip the overlap prefix when returning segments
+              streamOverlapSeconds: this.streamOverlapBuffer.length / sampleRate,
             },
           },
         },
@@ -1166,9 +1198,9 @@ class WhisperApp {
 
       document.getElementById('stream-active-panel').classList.add('hidden');
       document.getElementById('stream-start-btn').disabled = false;
-      document.getElementById('stream-status').textContent = '✓ Stream finished. Processing final chunk...';
+      document.getElementById('stream-status').innerHTML = '<i class="fas fa-check"></i> Stream finished. Processing final chunk...';
 
-      this._showAlert(`✓ Stream stopped (${this.streamChunkCount} chunks processed)`, 'success');
+      this._showAlert(`Stream stopped (${this.streamChunkCount} chunks processed)`, 'success');
     } catch (err) {
       this._showAlert(`Error stopping stream: ${err.message}`, 'error');
     }
@@ -1380,7 +1412,7 @@ class WhisperApp {
 
     const messages = [];
     if (applied.length > 0) {
-      messages.push(`✓ Applied: ${applied.join(', ')}`);
+      messages.push(`Applied: ${applied.join(', ')}`);
     }
     if (errors.length > 0) {
       messages.push(`⚠ ${errors.join('; ')}`);

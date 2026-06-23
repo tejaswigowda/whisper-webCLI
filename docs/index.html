@@ -57,7 +57,7 @@
             <div style="display: flex; gap: 8px; margin-bottom: 14px;">
               <button id="mode-file-btn" class="btn btn-mode active" onclick="window.switchInputMode && window.switchInputMode('file')" style="flex: 1;"><i class="fas fa-folder-open"></i> Upload File</button>
               <button id="mode-mic-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('mic')" style="flex: 1;"><i class="fas fa-microphone"></i> Recording</button>
-              <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none;"><i class="fas fa-globe"></i> Live Stream</button>
+              <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none"><i class="fas fa-globe"></i> Live Stream</button>
             </div>
 
             <!-- File Upload Mode -->
@@ -110,7 +110,7 @@
             <!-- Live Stream Mode -->
             <div id="stream-mode" class="input-mode hidden">
               <div style="padding: 16px; background: var(--surface2); border-radius: 6px; text-align: center;">
-                <p class="hint">Click below to start live transcription. Audio is processed in 5-second chunks.</p>
+                <p class="hint">Click below to start live transcription. Audio is processed in 15-second chunks with 5s overlap for better accuracy.</p>
                 <button id="stream-start-btn" class="btn btn-primary" onclick="window.startLiveStream && window.startLiveStream()" style="margin-top: 12px; padding: 12px 24px;">
                   <i class="fas fa-circle" style="color: #44ff44;"></i> Start Streaming
                 </button>
@@ -249,19 +249,19 @@
           <div id="metrics-panel" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; padding: 12px; background: var(--surface3); border-radius: 6px;">
             <div class="metric-item">
               <span class="metric-label">Transcription Speed</span>
-              <span class="metric-value" id="speed-metric">— sec/token</span>
+              <span class="metric-value" id="speed-metric">- sec/token</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Detected Language</span>
-              <span class="metric-value" id="language-metric">—</span>
+              <span class="metric-value" id="language-metric">-</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Processing Time</span>
-              <span class="metric-value" id="time-metric">— sec</span>
+              <span class="metric-value" id="time-metric">- sec</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Tokens/Second</span>
-              <span class="metric-value" id="tokens-metric">—</span>
+              <span class="metric-value" id="tokens-metric">-</span>
             </div>
           </div>
 
@@ -324,13 +324,13 @@
         <div class="card-header"><i class="fas fa-circle-info"></i> About</div>
         <div class="card-body">
           <p class="text-secondary" style="margin-bottom: 12px;">
-            whisper webCLI is a privacy-preserving browser application that runs OpenAI's Whisper speech-recognition model entirely on your device. No audio is uploaded anywhere. It is the second tool in the webCLI family, alongside
+            whisper webCLI is a privacy-preserving browser application that runs OpenAI's Whisper speech-recognition model entirely on your device via <a href="https://huggingface.co/docs/transformers.js">Transformers.js</a> and ONNX. No audio is uploaded anywhere. It is the second tool in the webCLI family, alongside
             <a href="https://github.com/tejaswigowda/ffmpeg-webCLI">ffmpeg-webCLI</a>.
           </p>
           <p class="text-secondary text-small">
             <a href="https://github.com/tejaswigowda/whisper-webCLI">GitHub</a>
             &middot;
-            <a href="https://github.com/ggerganov/whisper.cpp">whisper.cpp</a>
+            <a href="https://huggingface.co/docs/transformers.js">Transformers.js</a>
             &middot;
             <a href="https://openai.com/research/whisper">OpenAI Whisper</a>
           </p>
