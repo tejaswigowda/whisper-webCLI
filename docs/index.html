@@ -54,7 +54,7 @@
           <div class="card-header"><i class="fas fa-bars"></i> Step 1 &middot; Select Audio or Video</div>
           <div class="card-body">
             <!-- Mode Selector: File vs Microphone vs Live Stream -->
-            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 14px; display:none">
               <button id="mode-file-btn" class="btn btn-mode active" onclick="window.switchInputMode && window.switchInputMode('file')" style="flex: 1;"><i class="fas fa-folder-open"></i> Upload File</button>
               <button id="mode-mic-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('mic')" style="flex: 1;"><i class="fas fa-microphone"></i> Recording</button>
               <button id="mode-stream-btn" class="btn btn-mode" onclick="window.switchInputMode && window.switchInputMode('stream')" style="flex: 1;display:none"><i class="fas fa-globe"></i> Live Stream</button>
@@ -155,7 +155,7 @@
                 <label class="lbl" for="language-select">Language</label>
                 <select id="language-select">
                   <option value="auto">Auto-detect</option>
-                  <option value="en">English</option>
+                  <option value="en" selected>English</option>
                   <option value="es">Spanish</option>
                   <option value="fr">French</option>
                   <option value="de">German</option>

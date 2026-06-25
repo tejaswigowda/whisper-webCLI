@@ -367,19 +367,20 @@ class WhisperApp {
    */
   async _requestWakeLock() {
     if (!('wakeLock' in navigator)) {
-      console.warn('Screen Wake Lock API not supported');
       return;
     }
 
     try {
       this.wakeLockSentinel = await navigator.wakeLock.request('screen');
-      console.log('✓ Screen wake lock acquired');
 
+      // Re-acquire when the tab becomes visible again (browser releases lock on hide)
       this.wakeLockSentinel.addEventListener('release', () => {
-        console.log('Screen wake lock released');
+        if (this.isTranscribing || this.isStreaming) {
+          this._requestWakeLock();
+        }
       });
     } catch (err) {
-      console.warn('Failed to acquire screen wake lock:', err);
+      // Wake lock is a best-effort feature; silently ignore failures
     }
   }
 
@@ -1001,6 +1002,7 @@ class WhisperApp {
         this._processStreamChunk();
       }, this.streamChunkSize * 1000);
 
+      await this._requestWakeLock();
       this._showAlert('Live streaming started (15s chunks, 5s overlap)', 'success');
     } catch (err) {
       this._showAlert(`Microphone access denied: ${err.message}`, 'error');
@@ -1213,11 +1215,22 @@ class WhisperApp {
     let audioBuffer;
     let file = null;
 
+    // Show UI feedback immediately before any async work
+    const btn = document.getElementById('transcribe-button');
+    btn.disabled = true;
+    document.getElementById('preview-container').classList.remove('hidden');
+    document.getElementById('progress-container').classList.remove('hidden');
+    document.getElementById('transcript-container').classList.add('hidden');
+    document.getElementById('download-section').classList.add('hidden');
+    this._updateTranscriptionProgress({ pct: null, label: 'Preparing audio…', segments: [] });
+
     if (this.inputMode === 'file') {
       // File mode: original logic
       const fileInput = document.getElementById('audio-file');
       if (!fileInput.files.length) {
         this._showAlert('Please select an audio file', 'warning');
+        btn.disabled = false;
+        document.getElementById('preview-container').classList.add('hidden');
         return;
       }
       file = fileInput.files[0];
@@ -1226,6 +1239,8 @@ class WhisperApp {
       // Microphone mode: use recorded audio
       if (!this.recordedAudio || this.recordedAudio.length === 0) {
         this._showAlert('Please record audio first', 'warning');
+        btn.disabled = false;
+        document.getElementById('preview-container').classList.add('hidden');
         return;
       }
       audioBuffer = {
@@ -1236,6 +1251,8 @@ class WhisperApp {
       };
     } else {
       this._showAlert('Invalid input mode', 'error');
+      btn.disabled = false;
+      document.getElementById('preview-container').classList.add('hidden');
       return;
     }
 
@@ -1249,11 +1266,6 @@ class WhisperApp {
       this.confidenceScores = [];
       this.segmentDetails = [];
       
-      document.getElementById('transcribe-button').disabled = true;
-      document.getElementById('progress-container').classList.remove('hidden');
-      document.getElementById('preview-container').classList.remove('hidden');
-      document.getElementById('transcript-container').classList.add('hidden');
-      document.getElementById('download-section').classList.add('hidden');
       this._updateTranscriptionProgress({ pct: 0, label: 'Initializing…', segments: [] });
 
       // Set up media player for file mode only
