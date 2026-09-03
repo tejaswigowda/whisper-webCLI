@@ -10,6 +10,18 @@ A browser-based speech-to-text transcriber powered by OpenAI's Whisper model. <b
 
 ---
 
+## Paper
+
+This tool is a reference implementation of the **Web-CLI** architecture, described in:
+
+> **The Web-CLI: Verifiable Privacy for Tools, Models, and Inference Engines in the Browser**
+> Tejaswi Gowda, Arizona State University.
+> arXiv: https://arxiv.org/abs/2608.28950
+
+The paper defines the four properties (fidelity, progressive disclosure, offline-first, zero egress), presents four reference implementations, and argues that for sensitive data, client-side should be the default architecture because it makes privacy a *verifiable* technical property rather than a policy promise.
+
+---
+
 ## Key Features
 
 - **No Server Uploads**: All transcription happens entirely on your device - audio is never sent anywhere
@@ -237,6 +249,18 @@ const segments = await transcriber.transcribe(audioBuffer, {
 ## Dependencies
 
 **None** - pure browser APIs plus Transformers.js and ONNX Runtime. Node.js is only used for the local development server.
+
+---
+
+## Part of the Web-CLI family
+
+A family of zero-egress browser tools - your data never leaves your device, verifiable in DevTools. All free, open source, and installable as offline PWAs.
+
+- **[ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI)** - full FFmpeg in the browser: trim, convert, compress, caption, and 30+ video operations. ([live](https://tejaswigowda.com/ffmpeg-webCLI/))
+- **[chat-webCLI](https://github.com/tejaswigowda/chat-webCLI)** - local LLM chat via WebLLM/WebGPU; prompts never leave the device. ([live](https://tejaswigowda.com/chat-webCLI/))
+- **[3mf-webCLI](https://github.com/tejaswigowda/3mf-webCLI)** - GLB to multi-material 3MF for AMS/MMU 3D printing, client-side. ([live](https://tejaswigowda.com/3mf-webCLI/))
+
+Architecture paper: [arXiv:2608.28950](https://arxiv.org/abs/2608.28950)
 
 ---
 
